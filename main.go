@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"image/color"
 	"math"
-	"strconv"
-	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
