@@ -178,30 +178,29 @@ func main() {
 	headerContainer := container.NewVBox(headerStack)
 
 	// --- Input Section (MODIFIKASI: INPUT KALENDER) ---
-	inputLabel := canvas.NewText("Pilih Tanggal / Geblag:", ColorTextGrey)
-	inputLabel.TextSize = 12
+	// --- Input Section (MODIFIKASI: INPUT KALENDER YANG COMPATIBLE) ---
+inputLabel := canvas.NewText("Pilih Tanggal / Geblag:", ColorTextGrey)
+inputLabel.TextSize = 12
 
-	// Variabel untuk menyimpan tanggal yang dipilih
-	var selectedDate = time.Now()
-	
-	// Label untuk menampilkan tanggal yang dipilih user
-	lblSelectedDate := widget.NewLabel(selectedDate.Format("02 January 2006"))
-	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true, Monospace: true}
-	lblSelectedDate.Alignment = fyne.TextAlignCenter
+var selectedDate = time.Now()
+lblSelectedDate := widget.NewLabel(selectedDate.Format("02 January 2006"))
+lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true, Monospace: true}
+lblSelectedDate.Alignment = fyne.TextAlignCenter
 
-	// Tombol untuk membuka Kalender
-	btnPickDate := widget.NewButtonWithIcon("Buka Kalender", theme.CalendarIcon(), func() {
-		// Dialog Datepicker Fyne
-		d := dialog.NewDatepicker(func(t time.Time) {
-			// Callback saat tanggal dipilih
-			selectedDate = t
-			// Update label text agar user tahu apa yang dipilih
-			// Kita format ke Indonesia style
-			bulan := BulanIndo[t.Month()]
-			lblSelectedDate.SetText(fmt.Sprintf("%02d %s %d", t.Day(), bulan, t.Year()))
-		}, myWindow)
-		d.Show()
-	})
+// Perbaikan pada bagian ini:
+btnPickDate := widget.NewButtonWithIcon("Buka Kalender", theme.CalendarIcon(), func() {
+    // Memanggil DatePicker dengan cara yang lebih standar
+    dateDialog := dialog.NewDatepicker(func(t time.Time) {
+        if t.IsZero() { // Cek jika user membatalkan
+            return
+        }
+        selectedDate = t
+        bulan := BulanIndo[t.Month()]
+        lblSelectedDate.SetText(fmt.Sprintf("%02d %s %d", t.Day(), bulan, t.Year()))
+    }, myWindow)
+    
+    dateDialog.Show()
+})
 
 	btnCalc := widget.NewButton("Hitung Selamatan", nil)
 	btnCalc.Importance = widget.HighImportance // Membuat tombol lebih menonjol
