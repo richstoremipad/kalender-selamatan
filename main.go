@@ -16,7 +16,7 @@ import (
 )
 
 // ==========================================
-// 1. LOGIKA MATEMATIKA & KALENDER
+// 1. LOGIKA MATEMATIKA & KALENDER (FIXED)
 // ==========================================
 
 var (
@@ -26,62 +26,57 @@ var (
 	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 )
 
-// Konversi tanggal Masehi ke Format Jawa (Logic Porting dari Bash)
+// dateToJDN menghitung Julian Day Number dari tanggal Masehi.
+// Ini adalah algoritma standar astronomi (Fliegel-Van Flandern) yang sangat akurat.
+func dateToJDN(t time.Time) int {
+	a := (14 - int(t.Month())) / 12
+	y := t.Year() + 4800 - a
+	m := int(t.Month()) + 12*a - 3
+	return t.Day() + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
+}
+
+// Konversi tanggal Masehi ke Format Jawa
 func getJavaneseDate(t time.Time) string {
-	d := t.Day()
-	m := int(t.Month())
-	y := t.Year()
+	// 1. Hitung JDN
+	jd := dateToJDN(t)
 
-	// Logic Weton (Pasaran)
-	// Unix timestamp / 86400 + 4 % 5 (Mirip logic bash)
-	// Kita gunakan referensi simple: 20 Januari 2027 adalah Rabu Wage (Untuk validasi)
-	// Tapi cara paling aman pakai Modulo Julian Day atau referensi tanggal pas.
-	// Menggunakan logic bash: ((target_ts / 86400) + 4) % 5
-	unixDays := t.Unix() / 86400
-	pasaranIdx := (unixDays + 4) % 5
-	if pasaranIdx < 0 {
-		pasaranIdx += 5
-	}
-
-	// Logic Tahun/Bulan Jawa (Porting Matematika Julian Day dari Bash)
-	if m <= 2 {
-		y -= 1
-		m += 12
-	}
+	// 2. Koreksi Tanggal Jawa (Hijriah Calendar Approximation)
+	// Rumus aritmatika tabular sering meleset 1 hari tergantung kriteria (Rukyatul Hilal vs Hisab).
+	// Berdasarkan feedback (1 Des 2024 = 29 Jumadil Awal), kita perlu penyesuaian +1 pada offset perhitungan.
 	
-	a := y / 100
-	b := 2 - a + (a / 4)
-	
-	// Float calculation untuk presisi Julian Day
-	jd := math.Floor(365.25*float64(y+4716)) + math.Floor(30.6001*float64(m+1)) + float64(d) + float64(b) - 1524.5
-	l := int(jd) - 1948440 + 10632
+	// Algoritma konversi JD ke Hijri/Jawa Tabular:
+	l := jd - 1948440 + 10632 + 1 // (+1 added for calibration to Waktu.id/Mataram standard)
 	n := (l - 1) / 10631
 	l = l - 10631*n + 354
-	j := ((10985 - l) / 5316) * ((50 * l) / 17719) + (l / 5670) * ((43 * l) / 15238)
-	l = l - (((30 - j) / 15) * ((17719 * j) / 50)) - ((j / 16) * ((15238 * j) / 43)) + 29
-	hm := (24 * l) / 709
-	hd := l - ((709 * hm) / 24)
+	j := (int)((10985 - l) / 5316) * (int)((50 * l) / 17719) + (int)(l / 5670) * (int)((43 * l) / 15238)
+	l = l - (int)((30 - j) / 15) * (int)((17719 * j) / 50) - (int)(j / 16) * (int)((15238 * j) / 43) + 29
+	
+	hm := (int)(24 * l) / 709
+	hd := l - (int)(709 * hm) / 24
 
-	// Pastikan index bulan valid (1-12)
+	// Validasi index bulan
 	namaBulanJawa := ""
 	if hm > 0 && hm < len(BulanJawa) {
 		namaBulanJawa = BulanJawa[hm]
 	} else {
-		// Fallback jika kalkulasi math meleset sedikit (sangat jarang)
-		namaBulanJawa = "Unknown" 
+		namaBulanJawa = "Unknown"
 	}
 
 	return fmt.Sprintf("%d %s", hd, namaBulanJawa)
 }
 
 func formatWeton(t time.Time) string {
+	// Hari
 	hari := HariIndo[t.Weekday()]
-	unixDays := t.Unix() / 86400
-	pasaranIdx := (unixDays + 4) % 5
-	if pasaranIdx < 0 {
-		pasaranIdx += 5
-	}
+	
+	// Pasaran (Menggunakan JDN Modulo 5)
+	// Rumus: JDN % 5. 
+	// 0=Legi, 1=Pahing, 2=Pon, 3=Wage, 4=Kliwon
+	jd := dateToJDN(t)
+	pasaranIdx := jd % 5
 	pasaran := Pasaran[pasaranIdx]
+
+	// Tanggal & Bulan Jawa
 	jawaDate := getJavaneseDate(t)
 
 	return fmt.Sprintf("%s %s, %s", hari, pasaran, jawaDate)
@@ -95,13 +90,12 @@ func formatIndoDate(t time.Time) string {
 // 2. KOMPONEN UI CUSTOM
 // ==========================================
 
-// Warna Palette (Mirip Gambar)
+// Warna Palette
 var (
-	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 255}    // Background Utama
-	ColorCardBg     = color.NRGBA{R: 45, G: 48, B: 55, A: 255}    // Abu Gelap Card
-	ColorHeaderTop  = color.NRGBA{R: 40, G: 180, B: 160, A: 255}  // Teal/Tosca
-	ColorHeaderBot  = color.NRGBA{R: 50, G: 80, B: 160, A: 255}   // Biru
-	ColorBtnOrange  = color.NRGBA{R: 230, G: 150, B: 50, A: 255}  // Orange Tombol
+	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 255}
+	ColorCardBg     = color.NRGBA{R: 45, G: 48, B: 55, A: 255}
+	ColorHeaderTop  = color.NRGBA{R: 40, G: 180, B: 160, A: 255}
+	ColorHeaderBot  = color.NRGBA{R: 50, G: 80, B: 160, A: 255}
 	ColorTextWhite  = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
 	ColorTextGrey   = color.NRGBA{R: 180, G: 180, B: 180, A: 255}
 	ColorBadgeGreen = color.NRGBA{R: 46, G: 125, B: 50, A: 255}
@@ -109,9 +103,8 @@ var (
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
 
-// createCard membuat tampilan kartu per baris data
+// createCard membuat tampilan kartu
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
-	// 1. Status Badge Logic
 	var badgeColor color.Color
 	var badgeTextStr string
 	
@@ -127,9 +120,6 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
 
-	// 2. Komponen UI
-	
-	// Title & Subtitle (Kiri)
 	lblTitle := canvas.NewText(title, ColorTextWhite)
 	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
@@ -139,7 +129,6 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 
 	leftCont := container.NewVBox(lblTitle, lblSub)
 
-	// Date & Weton (Kanan)
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
 	lblDate.TextSize = 14
@@ -153,7 +142,6 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 
 	topRow := container.NewBorder(nil, nil, leftCont, rightCont)
 
-	// Badge (Bawah)
 	lblBadge := canvas.NewText(badgeTextStr, ColorTextWhite)
 	lblBadge.TextSize = 11
 	lblBadge.TextStyle = fyne.TextStyle{Bold: true}
@@ -161,20 +149,15 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 	badgeBg := canvas.NewRectangle(badgeColor)
 	badgeBg.CornerRadius = 12
 	
-	// Padding untuk badge text
 	badgeCont := container.NewStack(
 		badgeBg,
 		container.NewPadded(lblBadge),
 	)
 	
-	// Layout Bawah (Badge di kiri atau kanan? Gambar referensi di kiri/kanan. Kita taruh kiri & kanan sesuai context)
-	// Kita buat baris bawah untuk badge
 	botRow := container.NewHBox(badgeCont)
 
-	// Gabungkan Top dan Bot
 	content := container.NewVBox(topRow, container.NewPadded(botRow))
 
-	// 3. Background Card
 	bg := canvas.NewRectangle(ColorCardBg)
 	bg.CornerRadius = 10
 
@@ -197,7 +180,7 @@ func main() {
 	headerTitle.TextSize = 18
 	headerTitle.Alignment = fyne.TextAlignCenter
 	
-	headerIcon := canvas.NewImageFromResource(theme.InfoIcon()) // Placeholder icon
+	headerIcon := canvas.NewImageFromResource(theme.InfoIcon())
 	headerIcon.SetMinSize(fyne.NewSize(30,30))
 
 	headerStack := container.NewStack(
@@ -208,7 +191,6 @@ func main() {
 			layout.NewSpacer(),
 		)),
 	)
-	// Header height fix
 	headerContainer := container.NewVBox(headerStack)
 
 
@@ -217,13 +199,10 @@ func main() {
 	inputLabel.TextSize = 12
 
 	inputEntry := widget.NewEntry()
-	inputEntry.PlaceHolder = "Contoh: 20/01/2027"
+	inputEntry.PlaceHolder = "Contoh: 01/12/2024"
 	inputEntry.TextStyle = fyne.TextStyle{Monospace: true}
 
-	btnCalc := widget.NewButton("Hitung", nil) // Logic nanti
-	// Styling button agak tricky di Fyne standard, kita pakai default dulu tapi logic-nya kuat.
-	// Untuk warna orange, kita bisa bungkus logic high importance theme, atau biarkan default primary.
-	// Agar mirip gambar (tombol di kanan), kita pakai Border Layout.
+	btnCalc := widget.NewButton("Hitung", nil)
 
 	inputRow := container.NewBorder(nil, nil, nil, btnCalc, inputEntry)
 	
@@ -237,12 +216,10 @@ func main() {
 
 	// --- Result Container ---
 	resultBox := container.NewVBox()
-	
-	// Scroll Container
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
 	// --- Footer ---
-	noteText := "Notes: Perhitungan ini saya buat berdasarkan rumus jawa dari kitab yang pernah saya pelajari yaitu lusarlu (3), tusarmo (7), masarmo (40), rosarmo (100), patsarpat (Pendhak 1), rosarji (Pendhak 2), nemsarmo (1000). adapun perbedaan dari hitungan anda mungkin hanya 1/2 hari saja yang berarti tidak masalah. Wallahu A'lam Bishawab"
+	noteText := "Notes: Perhitungan ini saya buat berdasarkan rumus jawa dari kitab yang pernah saya pelajari yaitu lusarlu (3), tusarmo (7), masarmo (40), rosarmo (100), patsarpat (Pendhak 1), rosarji (Pendhak 2), nemsarmo (1000). Adapun perbedaan dari hitungan anda mungkin hanya 1/2 hari saja yang berarti tidak masalah. Wallahu A'lam Bishawab"
 	lblNote := widget.NewLabel(noteText)
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
@@ -263,7 +240,6 @@ func main() {
 	// --- Logic Calculation ---
 	btnCalc.OnTapped = func() {
 		dateStr := inputEntry.Text
-		// Parsing DD/MM/YYYY
 		layoutFormat := "02/01/2006"
 		t, err := time.Parse(layoutFormat, dateStr)
 		if err != nil {
@@ -276,8 +252,6 @@ func main() {
 
 		resultBox.Objects = nil // Clear previous
 
-		// Definisi Selamatan (Sesuai Script Bash)
-		// Format: Label, Sublabel (hari), Offset Hari
 		type Event struct {
 			Name   string
 			Sub    string
@@ -296,12 +270,11 @@ func main() {
 		}
 
 		now := time.Now()
-		// Normalize now to midnight for fair day comparison
+		// Normalize now to midnight
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0,0,0,0, now.Location())
 
 		for _, e := range events {
 			targetDate := t.AddDate(0, 0, e.Offset)
-			// Normalize target
 			targetDate = time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0,0,0,0, targetDate.Location())
 
 			diff := int(targetDate.Sub(now).Hours() / 24)
@@ -313,7 +286,6 @@ func main() {
 				status = 2 // Hari ini
 			}
 
-			// Render Card
 			card := createCard(
 				e.Name,
 				e.Sub,
@@ -323,23 +295,20 @@ func main() {
 				diff,
 			)
 			
-			// Add spacer and card
 			resultBox.Add(card)
-			resultBox.Add(layout.NewSpacer()) // Sedikit jarak
+			resultBox.Add(layout.NewSpacer()) 
 		}
 		resultBox.Refresh()
 	}
 
 	// --- Layout Utama ---
-	// Background Utama App
 	bgApp := canvas.NewRectangle(ColorBgDark)
 
-	// Konten disusun
 	mainContent := container.NewBorder(
-		container.NewVBox(headerContainer, container.NewPadded(inputSection)), // Top
-		container.NewPadded(footerSection), // Bottom
-		nil, nil, // Left, Right
-		scrollArea, // Center (Isian)
+		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
+		container.NewPadded(footerSection),
+		nil, nil, 
+		scrollArea, 
 	)
 
 	finalLayout := container.NewStack(bgApp, mainContent)
