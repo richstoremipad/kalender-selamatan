@@ -25,7 +25,7 @@ var (
 	BulanIndo = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 
-	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 180} // Transparansi agar background terlihat
+	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 150} // Transparansi agar background batik terlihat
 	ColorCardBg     = color.NRGBA{R: 45, G: 48, B: 55, A: 240}
 	ColorHeaderTop  = color.NRGBA{R: 40, G: 180, B: 160, A: 255}
 	ColorHeaderBot  = color.NRGBA{R: 50, G: 80, B: 160, A: 255}
@@ -64,11 +64,11 @@ func formatWeton(t time.Time) string {
 	return fmt.Sprintf("%s %s, %s", HariIndo[t.Weekday()], Pasaran[dateToJDN(t)%5], getJavaneseDate(t))
 }
 
-func createCard(title, sub, dateStr, wetonStr string, statusType, diffDays int) fyne.CanvasObject {
+func createCard(title, dateStr, wetonStr string, statusType, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
 	var badgeTxt string
 	switch statusType {
-	case 1: badgeColor, badgeTxt = ColorBadgeGreen, fmt.Sprintf("✓ Sudah Lewat (%d hari)", int(math.Abs(float64(diffDays))))
+	case 1: badgeColor, badgeTxt = ColorBadgeGreen, fmt.Sprintf("✓ Lewat (%d hari)", int(math.Abs(float64(diffDays))))
 	case 2: badgeColor, badgeTxt = ColorBadgeRed, "🔔 HARI INI!"
 	default: badgeColor, badgeTxt = ColorBadgeBlue, fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
@@ -90,11 +90,9 @@ func main() {
 
 	// Header
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
-	headerText := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
-	headerText.TextStyle.Bold = true
-	header := container.NewStack(gradient, container.NewCenter(headerText))
+	header := container.NewStack(gradient, container.NewCenter(canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)))
 
-	// Input Section
+	// Input & Result
 	inputEntry := widget.NewEntry(); inputEntry.PlaceHolder = "Contoh: 01/12/2024"
 	resultBox := container.NewVBox()
 	
@@ -102,10 +100,9 @@ func main() {
 		t, err := time.Parse("02/01/2006", inputEntry.Text)
 		if err != nil { return }
 		resultBox.Objects = nil
-		events := []struct { N string; S string; O int }{
-			{"Geblag", "Hari H", 0}, {"Nelung", "3 Hari", 2}, {"Mitung", "7 Hari", 6},
-			{"Matang", "40 Hari", 39}, {"Nyatus", "100 Hari", 99}, {"Pendhak I", "1 Tahun", 353},
-			{"Pendhak II", "2 Tahun", 707}, {"Nyewu", "1000 Hari", 999},
+		events := []struct { N string; O int }{
+			{"Geblag", 0}, {"Nelung", 2}, {"Mitung", 6}, {"Matang", 39},
+			{"Nyatus", 99}, {"Pendhak I", 353}, {"Pendhak II", 707}, {"Nyewu", 999},
 		}
 		now := time.Now().Truncate(24 * time.Hour)
 		for _, e := range events {
@@ -113,22 +110,21 @@ func main() {
 			diff := int(target.Sub(now).Hours() / 24)
 			status := 3
 			if diff < 0 { status = 1 } else if diff == 0 { status = 2 }
-			resultBox.Add(createCard(e.N, e.S, target.Format("02-01-2006"), formatWeton(target), status, diff))
-			resultBox.Add(layout.NewSpacer())
+			resultBox.Add(createCard(e.N, target.Format("02-01-2006"), formatWeton(target), status, diff))
 		}
 	})
 
-	// Background setup
+	// Penempatan Background Gambar
 	bgImage := canvas.NewImageFromFilesystem("background.png")
 	bgImage.FillMode = canvas.ImageFillStretch
 
 	mainContent := container.NewBorder(
-		container.NewVBox(header, container.NewPadded(container.NewVBox(widget.NewLabel("Input Tanggal (DD/MM/YYYY):"), inputEntry, btnCalc))),
+		container.NewVBox(header, container.NewPadded(container.NewVBox(widget.NewLabel("Tanggal Geblag (DD/MM/YYYY):"), inputEntry, btnCalc))),
 		container.NewPadded(widget.NewLabelWithStyle("Matur Nuwun - Code by Richo", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})),
 		nil, nil, container.NewVScroll(container.NewPadded(resultBox)),
 	)
 
-	// Final Stack: Background Image -> Tint (Warna gelap transparan) -> UI
+	// Menyusun tumpukan: Gambar Batik -> Layer Gelap -> Konten Aplikasi
 	myWindow.SetContent(container.NewStack(bgImage, canvas.NewRectangle(ColorBgDark), mainContent))
 	myWindow.ShowAndRun()
 }
