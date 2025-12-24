@@ -26,7 +26,6 @@ var (
 	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 )
 
-// Julian Day Number
 func dateToJDN(t time.Time) int {
 	a := (14 - int(t.Month())) / 12
 	y := t.Year() + 4800 - a
@@ -34,7 +33,6 @@ func dateToJDN(t time.Time) int {
 	return t.Day() + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
 }
 
-// Tanggal Jawa
 func getJavaneseDate(t time.Time) string {
 	jd := dateToJDN(t)
 	l := jd - 1948440 + 10632 + 1
@@ -42,7 +40,6 @@ func getJavaneseDate(t time.Time) string {
 	l = l - 10631*n + 354
 	j := ((10985 - l) / 5316) * ((50 * l) / 17719) + (l / 5670) * ((43 * l) / 15238)
 	l = l - ((30 - j) / 15) * ((17719 * j) / 50) - (j / 16) * ((15238 * j) / 43) + 29
-
 	hm := (24 * l) / 709
 	hd := l - (709 * hm) / 24
 
@@ -131,11 +128,11 @@ func createCard(title, sub, dateStr, weton string, status, diff int) fyne.Canvas
 ================================ */
 
 func main() {
-	app := app.New()
-	win := app.NewWindow("Kalkulator Selamatan Jawa")
-	win.Resize(fyne.NewSize(420, 760))
+	a := app.New()
+	w := a.NewWindow("Kalkulator Selamatan Jawa")
+	w.Resize(fyne.NewSize(420, 760))
 
-	// Header
+	// HEADER
 	grad := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
 	title := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
 	title.TextStyle = fyne.TextStyle{Bold: true}
@@ -143,32 +140,44 @@ func main() {
 
 	header := container.NewStack(
 		grad,
-		container.NewCenter(container.NewHBox(theme.InfoIcon(), title)),
+		container.NewCenter(
+			container.NewHBox(
+				widget.NewIcon(theme.InfoIcon()),
+				title,
+			),
+		),
 	)
 
-	// Date Picker
-	label := canvas.NewText("Pilih Tanggal / Geblag", ColorTextGrey)
-	datePicker := widget.NewDatePicker()
-	datePicker.SetDate(time.Now())
+	// INPUT TANGGAL (MANUAL)
+	label := canvas.NewText("Masukkan Tanggal Geblag", ColorTextGrey)
+
+	dateEntry := widget.NewEntry()
+	dateEntry.SetPlaceHolder("YYYY-MM-DD")
+	dateEntry.SetText(time.Now().Format("2006-01-02"))
 
 	btn := widget.NewButton("Hitung", nil)
-	input := container.NewBorder(nil, nil, nil, btn, datePicker)
 
+	input := container.NewBorder(nil, nil, nil, btn, dateEntry)
 	inputCard := container.NewStack(
 		canvas.NewRectangle(ColorCardBg),
 		container.NewPadded(container.NewVBox(label, input)),
 	)
 
-	// Result
+	// RESULT
 	result := container.NewVBox()
 	scroll := container.NewVScroll(container.NewPadded(result))
 
 	btn.OnTapped = func() {
 		result.Objects = nil
 
-		t := datePicker.Date
-		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
+		t, err := time.Parse("2006-01-02", dateEntry.Text)
+		if err != nil {
+			result.Add(widget.NewLabel("❌ Format salah! Gunakan YYYY-MM-DD"))
+			result.Refresh()
+			return
+		}
 
+		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 		now := time.Now()
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.Local)
 
@@ -198,10 +207,12 @@ func main() {
 			}
 
 			result.Add(createCard(
-				e.Name, e.Sub,
+				e.Name,
+				e.Sub,
 				formatIndoDate(d),
 				formatWeton(d),
-				status, diff,
+				status,
+				diff,
 			))
 			result.Add(layout.NewSpacer())
 		}
@@ -215,6 +226,6 @@ func main() {
 		scroll,
 	)
 
-	win.SetContent(container.NewStack(bg, content))
-	win.ShowAndRun()
+	w.SetContent(container.NewStack(bg, content))
+	w.ShowAndRun()
 }
