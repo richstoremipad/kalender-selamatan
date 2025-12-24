@@ -315,4 +315,14 @@ func main() {
 
 	myWindow.SetContent(finalLayout)
 	myWindow.ShowAndRun()
+
+	// Load gambar background
+bgImage := canvas.NewImageFromFilesystem("background.png")
+bgImage.FillMode = canvas.ImageFillStretch // Agar gambar menutupi seluruh layar
+
+// Gunakan container.NewStack agar konten berada di atas background
+contentWithBg := container.NewStack(bgImage, mainContent)
+
+myWindow.SetContent(contentWithBg)
+
 }
