@@ -16,7 +16,7 @@ import (
 )
 
 // ==========================================
-// 1. LOGIKA & KONSTANTA
+// 1. DATA & WARNA
 // ==========================================
 
 var (
@@ -35,6 +35,10 @@ var (
 	ColorBadgeRed   = color.NRGBA{R: 198, G: 40, B: 40, A: 255}
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
+
+// ==========================================
+// 2. LOGIKA PERHITUNGAN
+// ==========================================
 
 func dateToJDN(t time.Time) int {
 	a := (14 - int(t.Month())) / 12
@@ -76,7 +80,7 @@ func createCard(title, sub, dateStr, wetonStr string, statusType, diffDays int) 
 }
 
 // ==========================================
-// 2. MAIN FUNCTION
+// 3. MAIN APP
 // ==========================================
 
 func main() {
@@ -86,11 +90,14 @@ func main() {
 
 	// Header
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
-	header := container.NewStack(gradient, container.NewCenter(canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)))
+	headerText := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
+	headerText.TextStyle.Bold = true
+	header := container.NewStack(gradient, container.NewCenter(headerText))
 
-	// Input
+	// Input Section
 	inputEntry := widget.NewEntry(); inputEntry.PlaceHolder = "Contoh: 01/12/2024"
 	resultBox := container.NewVBox()
+	
 	btnCalc := widget.NewButtonWithIcon("Hitung", theme.ConfirmIcon(), func() {
 		t, err := time.Parse("02/01/2006", inputEntry.Text)
 		if err != nil { return }
@@ -107,20 +114,21 @@ func main() {
 			status := 3
 			if diff < 0 { status = 1 } else if diff == 0 { status = 2 }
 			resultBox.Add(createCard(e.N, e.S, target.Format("02-01-2006"), formatWeton(target), status, diff))
+			resultBox.Add(layout.NewSpacer())
 		}
 	})
 
-	// Background
+	// Background setup
 	bgImage := canvas.NewImageFromFilesystem("background.png")
 	bgImage.FillMode = canvas.ImageFillStretch
 
 	mainContent := container.NewBorder(
 		container.NewVBox(header, container.NewPadded(container.NewVBox(widget.NewLabel("Input Tanggal (DD/MM/YYYY):"), inputEntry, btnCalc))),
-		container.NewPadded(widget.NewLabelWithStyle("Code by Richo", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})),
+		container.NewPadded(widget.NewLabelWithStyle("Matur Nuwun - Code by Richo", fyne.TextAlignCenter, fyne.TextStyle{Italic: true})),
 		nil, nil, container.NewVScroll(container.NewPadded(resultBox)),
 	)
 
-	// Final Stack: Image -> Tint -> UI
+	// Final Stack: Background Image -> Tint (Warna gelap transparan) -> UI
 	myWindow.SetContent(container.NewStack(bgImage, canvas.NewRectangle(ColorBgDark), mainContent))
 	myWindow.ShowAndRun()
 }
