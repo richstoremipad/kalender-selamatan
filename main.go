@@ -8,34 +8,38 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"fyne.io/x/fyne/widget/calendar"
 )
 
 func main() {
-	// Membuat aplikasi dengan ID unik untuk Package Name
 	myApp := app.NewWithID("com.richo.kalender.selamatan")
 	myWindow := myApp.NewWindow("Kalkulator Selamatan")
 
-	header := widget.NewLabelWithStyle("KALKULATOR SELAMATAN", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})
-	labelTgl := widget.NewLabel("Silakan Pilih Tanggal")
-	labelTgl.Alignment = fyne.TextAlignCenter
+	// Input teks dengan panduan format
+	inputTgl := widget.NewEntry()
+	inputTgl.SetPlaceHolder("Contoh: 24-12-2024")
 
-	// Wadah hasil yang bisa di-scroll
 	listContainer := container.NewVBox()
 	scroll := container.NewVScroll(listContainer)
 	scroll.SetMinSize(fyne.NewSize(0, 400))
 
-	// Tombol untuk membuka kalender
-	btnKalender := widget.NewButton("PILIH TANGGAL MENINGGAL", func() {
-		d := calendar.NewDatePicker(time.Now(), func(t time.Time) {
-			labelTgl.SetText("Tanggal dipilih: " + t.Format("02-01-2006"))
-			updateList(t, listContainer)
-		})
-		d.Show(myWindow)
+	btnHitung := widget.NewButton("HITUNG JADWAL", func() {
+		// Validasi input tanggal
+		t, err := time.Parse("02-01-2006", inputTgl.Text)
+		if err != nil {
+			widget.ShowError(fmt.Errorf("Format Salah! Gunakan Tgl-Bln-Thn"), myWindow)
+			return
+		}
+		updateList(t, listContainer)
 	})
 
 	content := container.NewBorder(
-		container.NewVBox(header, labelTgl, btnKalender, widget.NewSeparator()),
+		container.NewVBox(
+			widget.NewLabelWithStyle("KALKULATOR SELAMATAN", fyne.TextAlignCenter, fyne.TextStyle{Bold: true}),
+			widget.NewLabel("Masukkan Tanggal Meninggal:"),
+			inputTgl,
+			btnHitung,
+			widget.NewSeparator(),
+		),
 		widget.NewLabel("Matur Nuwun - Richo"),
 		nil, nil,
 		scroll,
@@ -52,14 +56,13 @@ func updateList(t time.Time, c *fyne.Container) {
 		nama string
 		hari int
 	}{
-		{"Geblag", 0}, {"Nelung Dino (3)", 2}, {"Mitung Dino (7)", 6},
-		{"Matang Puluh (40)", 39}, {"Nyatus (100)", 99},
-		{"Pendhak I", 353}, {"Pendhak II", 707}, {"Nyewu (1000)", 999},
+		{"Geblag", 0}, {"Nelung Dino (3 Hari)", 2}, {"Mitung Dino (7 Hari)", 6},
+		{"Matang Puluh (40 Hari)", 39}, {"Nyatus (100 Hari)", 99},
+		{"Pendhak I (1 Tahun)", 353}, {"Pendhak II (2 Tahun)", 707}, {"Nyewu (1000 Hari)", 999},
 	}
 
 	for _, item := range items {
 		target := t.AddDate(0, 0, item.hari)
-		// Menampilkan label peringatan dan tanggal masehi
 		info := fmt.Sprintf("%s: %s", item.nama, target.Format("02-01-2006"))
 		c.Add(widget.NewCard("", "", widget.NewLabel(info)))
 	}
