@@ -1,4 +1,4 @@
-module kalender-selamatan
+module com.kalender.selamatan
 
 go 1.23
 

@@ -21,7 +21,8 @@ jobs:
         run: |
           # Memaksa penggunaan icon.png dari folder utama
           $HOME/go/bin/fyne-cross android \
-            -app-id com.richo.kalender \
+            -app-id com.kalender.selamatan \
+            -name "Cek Selamatan" \
             -arch arm64 \
             -icon icon.png \
             -silent
