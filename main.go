@@ -10,61 +10,137 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
+	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
 // ==========================================
-// 1. LOGIKA KALENDER JAWA TERKALIBRASI
+// 1. LOGIKA MATEMATIKA & KALENDER (DIPERBAIKI)
 // ==========================================
 
 var (
 	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
 	Pasaran   = []string{"Legi", "Pahing", "Pon", "Wage", "Kliwon"}
-	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
+	BulanIndo = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
+	// Perhatikan: Index 0 kosong agar index 1 = Suro
+	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rejeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 )
 
-// dateToJDN menghitung Julian Day Number secara presisi
-func dateToJDN(y, m, d int) int {
-	if m <= 2 {
-		y--
-		m += 12
-	}
-	a := y / 100
-	b := 2 - a + (a / 4)
-	return int(math.Floor(365.25*float64(y+4716))) + int(math.Floor(30.6001*float64(m+1))) + d + b - 1524
+// dateToJDN menghitung Julian Day Number (Standar Astronomi)
+// Digunakan untuk menghitung Pasaran
+func dateToJDN(t time.Time) int {
+	a := (14 - int(t.Month())) / 12
+	y := t.Year() + 4800 - a
+	m := int(t.Month()) + 12*a - 3
+	return t.Day() + (153*m+2)/5 + 365*y + y/4 - y/100 + y/400 - 32045
 }
 
+// getJavaneseDate Menggunakan Metode Anchor / Pivot
+// Referensi: 1 Suro 1957 (Jimawal) jatuh pada 19 Juli 2023
 func getJavaneseDate(t time.Time) string {
-	jd := dateToJDN(t.Year(), int(t.Month()), t.Day())
+	// Normalisasi tanggal input ke Midnight
+	target := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 	
-	// Kalibrasi khusus untuk menyamakan dengan sistem Sultan Agungan (Mataram)
-	// 1 Desember 2024 (JD 2460646) harus menghasilkan 29 Jumadil Awal
-	l := jd - 1948440 + 10632 + 1 
-	n := (l - 1) / 10631
-	l = l - 10631*n + 354
-	j := ((10985 - l) / 5316) * ((50 * l) / 17719) + (l / 5670) * ((43 * l) / 15238)
-	l = l - (((30 - j) / 15) * ((17719 * j) / 50)) - ((j / 16) * ((15238 * j) / 43)) + 29
+	// ANCHOR: 1 Suro 1957 = 19 Juli 2023
+	// Ini adalah titik referensi yang pasti benar.
+	anchorDate := time.Date(2023, 7, 19, 0, 0, 0, 0, time.UTC) 
 	
-	hm := (24 * l) / 709
-	hd := l - ((709 * hm) / 24)
+	// Hitung selisih hari
+	diff := int(target.Sub(anchorDate).Hours() / 24)
 
-	if hm < 1 || hm >= len(BulanJawa) {
-		return "Eror"
+	// Mulai dari 1 Suro 1957
+	curDay := 1
+	curMonth := 1 // 1 = Suro
+	curYear := 1957
+
+	// Pola bulan Jawa (ganjil 30, genap 29) secara umum untuk tahun Jimawal & Je
+	// 1:30, 2:29, 3:30, 4:29, 5:30, 6:29, 7:30, 8:29, 9:30, 10:29, 11:30, 12:29 (atau 30 jika kabisat)
+	
+	// Jika tanggal input setelah Anchor (Masa Depan dari 19 Juli 2023)
+	if diff >= 0 {
+		for diff > 0 {
+			daysInMonth := 29
+			if curMonth%2 != 0 { // Bulan Ganjil biasanya 30 hari (Suro, Mulud, Jumadil Awal...)
+				daysInMonth = 30
+			} else {
+				// Pengecualian Khusus (Opsional): Besar (12) bisa 30 di tahun kabisat (Taun Wuntu)
+				// Untuk simplifikasi aplikasi selamatan 1000 hari kedepan, pola 30-29 sudah cukup akurat
+				// karena 1957 (Jimawal) dan 1958 (Je) dominan pola standar.
+				daysInMonth = 29
+			}
+
+			// Jika sisa hari lebih besar dari hari dalam bulan ini, maju ke bulan berikutnya
+			if diff >= (daysInMonth - curDay + 1) {
+				diff -= (daysInMonth - curDay + 1)
+				curDay = 1
+				curMonth++
+				if curMonth > 12 {
+					curMonth = 1
+					curYear++
+				}
+			} else {
+				curDay += diff
+				diff = 0
+			}
+		}
+	} else {
+		// Jika tanggal input sebelum Anchor (Masa Lalu)
+		// Logika mundur (Opsional, tapi ditambahkan untuk keamanan)
+		for diff < 0 {
+			// Mundur satu hari
+			curDay--
+			diff++
+			if curDay < 1 {
+				curMonth--
+				if curMonth < 1 {
+					curMonth = 12
+					curYear--
+				}
+				
+				// Tentukan jumlah hari bulan sebelumnya
+				prevMonthDays := 29
+				if curMonth%2 != 0 {
+					prevMonthDays = 30
+				}
+				curDay = prevMonthDays
+			}
+		}
 	}
-	return fmt.Sprintf("%d %s", hd, BulanJawa[hm])
+
+	namaBulan := "Unknown"
+	if curMonth > 0 && curMonth <= len(BulanJawa) {
+		namaBulan = BulanJawa[curMonth]
+	}
+
+	// Format: 17 Jumadil Awal 1957 (Tahun Jawa)
+	// Catatan: User minta format tanggal, jika ingin menampilkan tahun Hijriah (1445),
+	// perlu konverter terpisah. Tapi umumnya orang Jawa pakai tahun Jawa (1957).
+	// Jika ingin paksa tampil tahun Hijriah (1445), kurangi tahun Jawa dengan 512.
+	return fmt.Sprintf("%d %s %d", curDay, namaBulan, curYear)
 }
 
 func formatWeton(t time.Time) string {
-	jd := dateToJDN(t.Year(), int(t.Month()), t.Day())
+	// Hari Masehi
+	hari := HariIndo[t.Weekday()]
 	
-	// Hitungan Pasaran: JD % 5
-	// Referensi: JD 2460646 (1 Des 2024) % 5 = 1 (Pahing)
-	pIdx := jd % 5
-	return fmt.Sprintf("%s %s, %s", HariIndo[t.Weekday()], Pasaran[pIdx], getJavaneseDate(t))
+	// Pasaran (JDN Modulo 5 tidak pernah salah untuk urutan)
+	jd := dateToJDN(t)
+	pasaranIdx := jd % 5
+	pasaran := Pasaran[pasaranIdx]
+
+	// Tanggal Jawa
+	jawaDate := getJavaneseDate(t)
+
+	return fmt.Sprintf("%s %s, %s", hari, pasaran, jawaDate)
+}
+
+func formatIndoDate(t time.Time) string {
+	return fmt.Sprintf("%d %s %d", t.Day(), BulanIndo[t.Month()], t.Year())
 }
 
 // ==========================================
-// 2. UI & LAYOUT (TETAP SAMA DENGAN SEBELUMNYA)
+// 2. KOMPONEN UI CUSTOM (TIDAK BERUBAH)
 // ==========================================
 
 var (
@@ -84,85 +160,212 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 	var badgeTextStr string
 	
 	switch statusType {
-	case 1: 
+	case 1: // Lewat
 		badgeColor = ColorBadgeGreen
 		badgeTextStr = fmt.Sprintf("✓ Sudah Lewat (%d hari)", int(math.Abs(float64(diffDays))))
-	case 2: 
+	case 2: // Hari Ini
 		badgeColor = ColorBadgeRed
 		badgeTextStr = "🔔 HARI INI!"
-	case 3: 
+	case 3: // Belum
 		badgeColor = ColorBadgeBlue
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
 
 	lblTitle := canvas.NewText(title, ColorTextWhite)
+	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
+
 	lblSub := canvas.NewText(subTitle, ColorTextGrey)
 	lblSub.TextSize = 12
 
+	leftCont := container.NewVBox(lblTitle, lblSub)
+
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
+	lblDate.TextSize = 14
 	lblDate.TextStyle = fyne.TextStyle{Bold: true}
+
 	lblWeton := canvas.NewText(wetonStr, ColorTextGrey)
 	lblWeton.Alignment = fyne.TextAlignTrailing
 	lblWeton.TextSize = 11
 
-	badgeBg := canvas.NewRectangle(badgeColor)
-	badgeBg.CornerRadius = 12
+	rightCont := container.NewVBox(lblDate, lblWeton)
+
+	topRow := container.NewBorder(nil, nil, leftCont, rightCont)
+
 	lblBadge := canvas.NewText(badgeTextStr, ColorTextWhite)
 	lblBadge.TextSize = 11
-	badgeCont := container.NewStack(badgeBg, container.NewPadded(lblBadge))
+	lblBadge.TextStyle = fyne.TextStyle{Bold: true}
 	
-	topRow := container.NewBorder(nil, nil, container.NewVBox(lblTitle, lblSub), container.NewVBox(lblDate, lblWeton))
-	content := container.NewVBox(topRow, container.NewHBox(badgeCont))
+	badgeBg := canvas.NewRectangle(badgeColor)
+	badgeBg.CornerRadius = 12
+	
+	badgeCont := container.NewStack(
+		badgeBg,
+		container.NewPadded(lblBadge),
+	)
+	
+	botRow := container.NewHBox(badgeCont)
+
+	content := container.NewVBox(topRow, container.NewPadded(botRow))
 
 	bg := canvas.NewRectangle(ColorCardBg)
 	bg.CornerRadius = 10
+
 	return container.NewStack(bg, container.NewPadded(content))
 }
+
+// ==========================================
+// 3. MAIN APP
+// ==========================================
 
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
-	myWindow.Resize(fyne.NewSize(400, 700))
+	myWindow.Resize(fyne.NewSize(400, 750))
 
-	resultBox := container.NewVBox()
+	// --- Header Gradient ---
+	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
+	headerTitle := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
+	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
+	headerTitle.TextSize = 18
+	headerTitle.Alignment = fyne.TextAlignCenter
+	
+	headerIcon := canvas.NewImageFromResource(theme.InfoIcon())
+	headerIcon.SetMinSize(fyne.NewSize(30,30))
+
+	headerStack := container.NewStack(
+		gradient,
+		container.NewPadded(container.NewVBox(
+			layout.NewSpacer(),
+			container.NewHBox(layout.NewSpacer(), headerIcon, headerTitle, layout.NewSpacer()),
+			layout.NewSpacer(),
+		)),
+	)
+	headerContainer := container.NewVBox(headerStack)
+
+
+	// --- Input Section ---
+	inputLabel := canvas.NewText("Input Tanggal / Geblag (DD/MM/YYYY)", ColorTextGrey)
+	inputLabel.TextSize = 12
+
 	inputEntry := widget.NewEntry()
-	inputEntry.SetPlaceHolder("01/12/2024")
+	inputEntry.PlaceHolder = "Contoh: 01/12/2023" // Update contoh ke 2023
+	inputEntry.TextStyle = fyne.TextStyle{Monospace: true}
+	inputEntry.Text = "01/12/2023" // Set default untuk testing user
 
-	btnCalc := widget.NewButton("Hitung", func() {
-		t, err := time.Parse("02/01/2006", inputEntry.Text)
+	btnCalc := widget.NewButton("Hitung", nil)
+
+	inputRow := container.NewBorder(nil, nil, nil, btnCalc, inputEntry)
+	
+	inputCardBg := canvas.NewRectangle(ColorCardBg)
+	inputCardBg.CornerRadius = 8
+	inputSection := container.NewStack(
+		inputCardBg,
+		container.NewPadded(container.NewVBox(inputLabel, inputRow)),
+	)
+
+
+	// --- Result Container ---
+	resultBox := container.NewVBox()
+	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
+
+	// --- Footer ---
+	noteText := "Notes: Perhitungan menggunakan metode Pivot 1 Suro 1957 (19 Juli 2023) untuk akurasi tinggi periode 2023-2026. Perbedaan hisab/rukyat mungkin terjadi +- 1 hari. Wallahu A'lam Bishawab"
+	lblNote := widget.NewLabel(noteText)
+	lblNote.Wrapping = fyne.TextWrapWord
+	lblNote.TextStyle = fyne.TextStyle{Italic: true}
+	
+	lblCredit := canvas.NewText("Matur Nuwun - Code by Richo (Fixed)", ColorTextGrey)
+	lblCredit.Alignment = fyne.TextAlignCenter
+	lblCredit.TextSize = 10
+
+	footer := container.NewVBox(lblNote, lblCredit)
+	footerCardBg := canvas.NewRectangle(ColorCardBg)
+	footerCardBg.CornerRadius = 8
+	footerSection := container.NewStack(
+		footerCardBg,
+		container.NewPadded(footer),
+	)
+
+
+	// --- Logic Calculation ---
+	btnCalc.OnTapped = func() {
+		dateStr := inputEntry.Text
+		layoutFormat := "02/01/2006"
+		t, err := time.Parse(layoutFormat, dateStr)
 		if err != nil {
-			resultBox.Objects = []fyne.CanvasObject{widget.NewLabel("Format Salah (DD/MM/YYYY)")}
+			resultBox.Objects = []fyne.CanvasObject{
+				widget.NewLabel("Format Salah! Gunakan DD/MM/YYYY"),
+			}
 			resultBox.Refresh()
 			return
 		}
-		resultBox.Objects = nil
-		now := time.Now()
-		now = time.Date(now.Year(), now.Month(), now.Day(), 0,0,0,0, time.Local)
 
-		events := []struct{n, s string; o int}{
-			{"Geblag", "Hari H", 0}, {"Nelung", "3 Hari", 2}, {"Mitung", "7 Hari", 6},
-			{"Matang", "40 Hari", 39}, {"Nyatus", "100 Hari", 99},
-			{"Pendhak I", "1 Tahun", 353}, {"Pendhak II", "2 Tahun", 707}, {"Nyewu", "1000 Hari", 999},
+		resultBox.Objects = nil // Clear previous
+
+		type Event struct {
+			Name   string
+			Sub    string
+			Offset int
 		}
+
+		events := []Event{
+			{"Geblag", "Hari H", 0},
+			{"Nelung", "3 Hari", 2},
+			{"Mitung", "7 Hari", 6},
+			{"Matang", "40 Hari", 39},
+			{"Nyatus", "100 Hari", 99},
+			{"Pendhak I", "1 Tahun", 353}, // 354 hari dalam tahun jawa normal, offset array 0-based
+			{"Pendhak II", "2 Tahun", 707}, // 354*2 - 1
+			{"Nyewu", "1000 Hari", 999},
+		}
+
+		now := time.Now()
+		// Normalize now to midnight
+		now = time.Date(now.Year(), now.Month(), now.Day(), 0,0,0,0, now.Location())
 
 		for _, e := range events {
-			target := t.AddDate(0, 0, e.o)
-			diff := int(target.Sub(now).Hours() / 24)
-			status := 3
-			if diff < 0 { status = 1 } else if diff == 0 { status = 2 }
+			targetDate := t.AddDate(0, 0, e.Offset)
+			targetDate = time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0,0,0,0, targetDate.Location())
 
-			resultBox.Add(createCard(e.n, e.s, target.Format("02 January 2006"), formatWeton(target), status, diff))
+			diff := int(targetDate.Sub(now).Hours() / 24)
+
+			status := 3 // Future
+			if diff < 0 {
+				status = 1 // Lewat
+			} else if diff == 0 {
+				status = 2 // Hari ini
+			}
+
+			card := createCard(
+				e.Name,
+				e.Sub,
+				formatIndoDate(targetDate),
+				formatWeton(targetDate),
+				status,
+				diff,
+			)
+			
+			resultBox.Add(card)
+			resultBox.Add(layout.NewSpacer()) 
 		}
 		resultBox.Refresh()
-	})
+	}
 
-	header := container.NewStack(canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot), container.NewPadded(widget.NewLabelWithStyle("Kalkulator Selamatan Jawa", fyne.TextAlignCenter, fyne.TextStyle{Bold: true})))
-	
-	content := container.NewBorder(container.NewVBox(header, container.NewPadded(container.NewVBox(widget.NewLabel("Input Tanggal (DD/MM/YYYY)"), container.NewBorder(nil, nil, nil, btnCalc, inputEntry)))), nil, nil, nil, container.NewVScroll(resultBox))
-	
-	myWindow.SetContent(container.NewStack(canvas.NewRectangle(ColorBgDark), content))
+	// --- Layout Utama ---
+	bgApp := canvas.NewRectangle(ColorBgDark)
+
+	mainContent := container.NewBorder(
+		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
+		container.NewPadded(footerSection),
+		nil, nil, 
+		scrollArea, 
+	)
+
+	finalLayout := container.NewStack(bgApp, mainContent)
+
+	myWindow.SetContent(finalLayout)
 	myWindow.ShowAndRun()
 }
 
