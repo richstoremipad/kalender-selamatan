@@ -15,17 +15,14 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// ==========================================
-// 1. DATA & WARNA
-// ==========================================
-
+// Data Kalender
 var (
 	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
 	Pasaran   = []string{"Legi", "Pahing", "Pon", "Wage", "Kliwon"}
 	BulanIndo = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 
-	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 150} // Transparansi agar background batik terlihat
+	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 160} 
 	ColorCardBg     = color.NRGBA{R: 45, G: 48, B: 55, A: 240}
 	ColorHeaderTop  = color.NRGBA{R: 40, G: 180, B: 160, A: 255}
 	ColorHeaderBot  = color.NRGBA{R: 50, G: 80, B: 160, A: 255}
@@ -35,10 +32,6 @@ var (
 	ColorBadgeRed   = color.NRGBA{R: 198, G: 40, B: 40, A: 255}
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
-
-// ==========================================
-// 2. LOGIKA PERHITUNGAN
-// ==========================================
 
 func dateToJDN(t time.Time) int {
 	a := (14 - int(t.Month())) / 12
@@ -79,20 +72,14 @@ func createCard(title, dateStr, wetonStr string, statusType, diffDays int) fyne.
 	return container.NewStack(bg, container.NewPadded(container.NewVBox(container.NewBorder(nil, nil, lblTitle, rightCont), container.NewHBox(badge))))
 }
 
-// ==========================================
-// 3. MAIN APP
-// ==========================================
-
 func main() {
 	myApp := app.New()
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
 	myWindow.Resize(fyne.NewSize(400, 750))
 
-	// Header
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
 	header := container.NewStack(gradient, container.NewCenter(canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)))
 
-	// Input & Result
 	inputEntry := widget.NewEntry(); inputEntry.PlaceHolder = "Contoh: 01/12/2024"
 	resultBox := container.NewVBox()
 	
@@ -114,7 +101,7 @@ func main() {
 		}
 	})
 
-	// Penempatan Background Gambar
+	// Penanganan Background
 	bgImage := canvas.NewImageFromFilesystem("background.png")
 	bgImage.FillMode = canvas.ImageFillStretch
 
@@ -124,7 +111,7 @@ func main() {
 		nil, nil, container.NewVScroll(container.NewPadded(resultBox)),
 	)
 
-	// Menyusun tumpukan: Gambar Batik -> Layer Gelap -> Konten Aplikasi
+	// Final Stack: Background -> Layer Gelap -> Konten
 	myWindow.SetContent(container.NewStack(bgImage, canvas.NewRectangle(ColorBgDark), mainContent))
 	myWindow.ShowAndRun()
 }
