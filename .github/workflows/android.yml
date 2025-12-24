@@ -10,7 +10,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23' # Versi stabil untuk fyne-cross
+          go-version: '1.23'
 
       - name: Install Dependencies
         run: |
@@ -19,7 +19,7 @@ jobs:
 
       - name: Build APK (arm64)
         run: |
-          # Parameter -icon icon.png adalah kunci agar ikon berubah
+          # Memaksa penggunaan icon.png dari folder utama
           $HOME/go/bin/fyne-cross android \
             -app-id com.richo.kalender \
             -arch arm64 \
@@ -29,5 +29,6 @@ jobs:
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: APK-Selamatan-Final
-          path: fyne-cross/dist/android/*.apk
+          name: APK-Selamatan-Premium
+          # Jalur diperluas agar mencakup semua sub-folder di dalam dist
+          path: fyne-cross/dist/**/*.apk
