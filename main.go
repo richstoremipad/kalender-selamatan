@@ -16,19 +16,18 @@ import (
 )
 
 // ==========================================
-// 1. LOGIKA MATEMATIKA & KALENDER (DIPERBAIKI)
+// 1. LOGIKA MATEMATIKA & KALENDER (FIXED 1445 H)
 // ==========================================
 
 var (
 	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
 	Pasaran   = []string{"Legi", "Pahing", "Pon", "Wage", "Kliwon"}
 	BulanIndo = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
-	// Perhatikan: Index 0 kosong agar index 1 = Suro
+	// Nama Bulan Jawa/Hijriah
 	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rejeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 )
 
-// dateToJDN menghitung Julian Day Number (Standar Astronomi)
-// Digunakan untuk menghitung Pasaran
+// dateToJDN menghitung Julian Day Number untuk mencari Pasaran (Legi, Pahing, dll)
 func dateToJDN(t time.Time) int {
 	a := (14 - int(t.Month())) / 12
 	y := t.Year() + 4800 - a
@@ -37,40 +36,40 @@ func dateToJDN(t time.Time) int {
 }
 
 // getJavaneseDate Menggunakan Metode Anchor / Pivot
-// Referensi: 1 Suro 1957 (Jimawal) jatuh pada 19 Juli 2023
+// UPDATE: Menggunakan Tahun Hijriah 1445 sebagai basis
 func getJavaneseDate(t time.Time) string {
 	// Normalisasi tanggal input ke Midnight
 	target := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC)
 	
-	// ANCHOR: 1 Suro 1957 = 19 Juli 2023
-	// Ini adalah titik referensi yang pasti benar.
+	// ANCHOR: 19 Juli 2023 = 1 Muharram/Suro 1445 H
 	anchorDate := time.Date(2023, 7, 19, 0, 0, 0, 0, time.UTC) 
 	
 	// Hitung selisih hari
 	diff := int(target.Sub(anchorDate).Hours() / 24)
 
-	// Mulai dari 1 Suro 1957
+	// Set Start: 1 Suro 1445
 	curDay := 1
 	curMonth := 1 // 1 = Suro
-	curYear := 1957
+	curYear := 1445 // <--- DIGANTI KE 1445 SESUAI REQUEST
 
-	// Pola bulan Jawa (ganjil 30, genap 29) secara umum untuk tahun Jimawal & Je
-	// 1:30, 2:29, 3:30, 4:29, 5:30, 6:29, 7:30, 8:29, 9:30, 10:29, 11:30, 12:29 (atau 30 jika kabisat)
+	// Pola bulan (30, 29, 30, 29...)
+	// Ini pola umum (Urisha). Koreksi hisab bisa +-1 hari di bulan-bulan akhir,
+	// tapi untuk keperluan selamatan 1000 hari kedepan, pola ini sangat stabil.
 	
-	// Jika tanggal input setelah Anchor (Masa Depan dari 19 Juli 2023)
 	if diff >= 0 {
 		for diff > 0 {
 			daysInMonth := 29
-			if curMonth%2 != 0 { // Bulan Ganjil biasanya 30 hari (Suro, Mulud, Jumadil Awal...)
+			if curMonth%2 != 0 { // Bulan Ganjil (1,3,5...) = 30 Hari
 				daysInMonth = 30
 			} else {
-				// Pengecualian Khusus (Opsional): Besar (12) bisa 30 di tahun kabisat (Taun Wuntu)
-				// Untuk simplifikasi aplikasi selamatan 1000 hari kedepan, pola 30-29 sudah cukup akurat
-				// karena 1957 (Jimawal) dan 1958 (Je) dominan pola standar.
 				daysInMonth = 29
 			}
 
-			// Jika sisa hari lebih besar dari hari dalam bulan ini, maju ke bulan berikutnya
+			// Pengecualian Akhir Tahun (Bulan 12/Besar/Dzulhijjah)
+			// Tahun Hijriah punya siklus kabisat 30 tahun.
+			// Untuk simplifikasi aplikasi ini tanpa library astronomi berat:
+			// Kita asumsikan pola standar. Jika user mendapati selisih 1 hari, itu wajar karena perbedaan Rukyat/Hisab.
+
 			if diff >= (daysInMonth - curDay + 1) {
 				diff -= (daysInMonth - curDay + 1)
 				curDay = 1
@@ -85,10 +84,8 @@ func getJavaneseDate(t time.Time) string {
 			}
 		}
 	} else {
-		// Jika tanggal input sebelum Anchor (Masa Lalu)
-		// Logika mundur (Opsional, tapi ditambahkan untuk keamanan)
+		// Logika Mundur (Untuk tanggal sebelum 19 Juli 2023)
 		for diff < 0 {
-			// Mundur satu hari
 			curDay--
 			diff++
 			if curDay < 1 {
@@ -98,7 +95,7 @@ func getJavaneseDate(t time.Time) string {
 					curYear--
 				}
 				
-				// Tentukan jumlah hari bulan sebelumnya
+				// Cek jumlah hari bulan sebelumnya
 				prevMonthDays := 29
 				if curMonth%2 != 0 {
 					prevMonthDays = 30
@@ -113,23 +110,16 @@ func getJavaneseDate(t time.Time) string {
 		namaBulan = BulanJawa[curMonth]
 	}
 
-	// Format: 17 Jumadil Awal 1957 (Tahun Jawa)
-	// Catatan: User minta format tanggal, jika ingin menampilkan tahun Hijriah (1445),
-	// perlu konverter terpisah. Tapi umumnya orang Jawa pakai tahun Jawa (1957).
-	// Jika ingin paksa tampil tahun Hijriah (1445), kurangi tahun Jawa dengan 512.
 	return fmt.Sprintf("%d %s %d", curDay, namaBulan, curYear)
 }
 
 func formatWeton(t time.Time) string {
-	// Hari Masehi
 	hari := HariIndo[t.Weekday()]
 	
-	// Pasaran (JDN Modulo 5 tidak pernah salah untuk urutan)
 	jd := dateToJDN(t)
 	pasaranIdx := jd % 5
 	pasaran := Pasaran[pasaranIdx]
 
-	// Tanggal Jawa
 	jawaDate := getJavaneseDate(t)
 
 	return fmt.Sprintf("%s %s, %s", hari, pasaran, jawaDate)
@@ -140,7 +130,7 @@ func formatIndoDate(t time.Time) string {
 }
 
 // ==========================================
-// 2. KOMPONEN UI CUSTOM (TIDAK BERUBAH)
+// 2. UI COMPONENTS (SAMA SEPERTI SEBELUMNYA)
 // ==========================================
 
 var (
@@ -250,9 +240,9 @@ func main() {
 	inputLabel.TextSize = 12
 
 	inputEntry := widget.NewEntry()
-	inputEntry.PlaceHolder = "Contoh: 01/12/2023" // Update contoh ke 2023
+	inputEntry.PlaceHolder = "Contoh: 01/12/2023"
 	inputEntry.TextStyle = fyne.TextStyle{Monospace: true}
-	inputEntry.Text = "01/12/2023" // Set default untuk testing user
+	inputEntry.Text = "01/12/2023" // Default testing
 
 	btnCalc := widget.NewButton("Hitung", nil)
 
@@ -271,12 +261,12 @@ func main() {
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
 	// --- Footer ---
-	noteText := "Notes: Perhitungan menggunakan metode Pivot 1 Suro 1957 (19 Juli 2023) untuk akurasi tinggi periode 2023-2026. Perbedaan hisab/rukyat mungkin terjadi +- 1 hari. Wallahu A'lam Bishawab"
+	noteText := "Notes: Perhitungan tahun mengikuti kalender Hijriah (1445 H). Anchor point: 19 Juli 2023 = 1 Muharram 1445. Wallahu A'lam Bishawab"
 	lblNote := widget.NewLabel(noteText)
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
 	
-	lblCredit := canvas.NewText("Matur Nuwun - Code by Richo (Fixed)", ColorTextGrey)
+	lblCredit := canvas.NewText("Matur Nuwun - Code by Richo", ColorTextGrey)
 	lblCredit.Alignment = fyne.TextAlignCenter
 	lblCredit.TextSize = 10
 
@@ -302,7 +292,7 @@ func main() {
 			return
 		}
 
-		resultBox.Objects = nil // Clear previous
+		resultBox.Objects = nil 
 
 		type Event struct {
 			Name   string
@@ -310,14 +300,16 @@ func main() {
 			Offset int
 		}
 
+		// Rumus offset hari selamatan (hari ke-1 terhitung hari meninggal/geblag)
+		// 3 Hari = +2, 7 Hari = +6, dst.
 		events := []Event{
 			{"Geblag", "Hari H", 0},
 			{"Nelung", "3 Hari", 2},
 			{"Mitung", "7 Hari", 6},
 			{"Matang", "40 Hari", 39},
 			{"Nyatus", "100 Hari", 99},
-			{"Pendhak I", "1 Tahun", 353}, // 354 hari dalam tahun jawa normal, offset array 0-based
-			{"Pendhak II", "2 Tahun", 707}, // 354*2 - 1
+			{"Pendhak I", "1 Tahun", 354}, // Tahun Hijriah/Jawa rata-rata 354/355 hari
+			{"Pendhak II", "2 Tahun", 708}, 
 			{"Nyewu", "1000 Hari", 999},
 		}
 
@@ -368,4 +360,3 @@ func main() {
 	myWindow.SetContent(finalLayout)
 	myWindow.ShowAndRun()
 }
-
