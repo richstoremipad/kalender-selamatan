@@ -213,7 +213,7 @@ func main() {
 
 
 	// --- Input Section ---
-	inputLabel := canvas.NewText("Input Dagall / Geblag (DD/MM/YYYY)", ColorTextGrey)
+	inputLabel := canvas.NewText("Input Tanggal / Geblag (DD/MM/YYYY)", ColorTextGrey)
 	inputLabel.TextSize = 12
 
 	inputEntry := widget.NewEntry()
@@ -242,7 +242,7 @@ func main() {
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
 	// --- Footer ---
-	noteText := "Notes: Perhitungan menggunakan rumus lusarlu (3), tusarmo (7), masarmo (40), rosarmo (100), patsarpat (Pendhak 1), rosarji (Pendhak 2), nemsarmo (1000)."
+	noteText := "Notes: Perhitungan ini saya buat berdasarkan rumus jawa dari kitab yang pernah saya pelajari yaitu lusarlu (3), tusarmo (7), masarmo (40), rosarmo (100), patsarpat (Pendhak 1), rosarji (Pendhak 2), nemsarmo (1000). adapun perbedaan dari hitungan anda mungkin hanya 1/2 hari saja yang berarti tidak masalah. Wallahu A'lam Bishawab"
 	lblNote := widget.NewLabel(noteText)
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
