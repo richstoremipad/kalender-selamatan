@@ -1,6 +1,6 @@
-module com.kalender.selamatan
+module github.com/richstoremipad/kalender-selamatan
 
-go 1.23
+go 1.25.4
 
 require (
 	fyne.io/fyne/v2 v2.7.1
