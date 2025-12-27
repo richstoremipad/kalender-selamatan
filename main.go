@@ -10,11 +10,10 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog" // Import Dialog untuk Popup Kalender
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
-	// SAYA SUDAH MENGHAPUS IMPORT "fyne-x" YANG BIKIN ERROR
 )
 
 // ==========================================
@@ -165,29 +164,27 @@ func main() {
 	)
 	headerContainer := container.NewVBox(headerStack)
 
-	// --- Input Section (MENGGUNAKAN TOMBOL KALENDER STANDARD) ---
+	// --- Input Section ---
 	inputLabel := canvas.NewText("Pilih Tanggal Geblag / Wafat:", ColorTextGrey)
 	inputLabel.TextSize = 12
 
-	// Variabel untuk menyimpan tanggal yang dipilih (Default Hari Ini)
 	selectedDate := time.Now()
 
-	// Tombol untuk membuka Kalender
 	btnSelectDate := widget.NewButton(selectedDate.Format("02/01/2006"), nil)
 	btnSelectDate.Icon = theme.CalendarIcon()
 	btnSelectDate.Importance = widget.LowImportance
 
-	// Logic saat tombol tanggal diklik
 	btnSelectDate.OnTapped = func() {
-		cal := widget.NewCalendar(func(t time.Time) {
-			// Saat tanggal di kalender dipilih:
+		// PERBAIKAN DI SINI:
+		// Menambahkan 'selectedDate' sebagai parameter pertama.
+		// Artinya: Saat kalender dibuka, langsung arahkan ke tanggal yang sedang dipilih.
+		cal := widget.NewCalendar(selectedDate, func(t time.Time) {
 			selectedDate = t
-			btnSelectDate.SetText(t.Format("02/01/2006")) // Update teks tombol
-			// Tutup dialog manual (workaround karena dialog calendar butuh di-dismiss)
-			// Di sini kita biarkan user menutup dialog sendiri atau otomatis tertutup oleh Dialog library
+			btnSelectDate.SetText(t.Format("02/01/2006"))
+			// Kalender tidak menutup otomatis karena ini widget custom di dalam dialog, 
+			// User bisa klik tombol Tutup di dialog.
 		})
 		
-		// Membuat Dialog Custom berisi Kalender
 		d := dialog.NewCustom("Pilih Tanggal", "Tutup", cal, myWindow)
 		d.Resize(fyne.NewSize(300, 300))
 		d.Show()
@@ -229,7 +226,7 @@ func main() {
 
 	// --- Logic Calculation ---
 	btnCalc.OnTapped = func() {
-		resultBox.Objects = nil // Clear previous
+		resultBox.Objects = nil 
 
 		type Event struct {
 			Name   string
@@ -248,11 +245,9 @@ func main() {
 			{"Nyewu", "1000 Hari", 999},
 		}
 
-		// Hitung dari variabel selectedDate
 		t := selectedDate
 		now := time.Now()
 		
-		// Normalize time to midnight
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0,0,0,0, now.Location())
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0,0,0,0, t.Location())
 
@@ -262,11 +257,11 @@ func main() {
 
 			diff := int(targetDate.Sub(now).Hours() / 24)
 
-			status := 3 // Future
+			status := 3
 			if diff < 0 {
-				status = 1 // Lewat
+				status = 1
 			} else if diff == 0 {
-				status = 2 // Hari ini
+				status = 2
 			}
 
 			card := createCard(
