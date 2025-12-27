@@ -16,8 +16,10 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// ... (Bagian 1: LOGIKA MATEMATIKA & KALENDER - Tidak ada perubahan, copy dari kode sebelumnya) ...
-// ... (Pastikan variabel HariIndo, Pasaran, fungsi dateToJDN, dll tetap ada) ...
+// ==========================================
+// 1. LOGIKA MATEMATIKA & KALENDER JAWA
+// ==========================================
+// (Tidak ada perubahan di bagian ini)
 
 var (
 	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
@@ -80,20 +82,130 @@ var (
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
 
-// --- CUSTOM THEME AGAR KALENDER BERUBAH WARNA ---
+// --- TEMA: Memaksa tombol HighImportance jadi Hijau ---
 type myTheme struct {
 	fyne.Theme
 }
 
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	// Memaksa warna Primary, Focus, dan Selection menjadi HIJAU
-	switch name {
-	case theme.ColorNamePrimary, theme.ColorNameFocus, theme.ColorNameSelection:
+	// Kita memaksa warna Primary (yang dipakai tombol HighImportance) jadi Hijau
+	if name == theme.ColorNamePrimary {
 		return ColorBadgeGreen
 	}
-	// Sisanya ikuti tema default (Dark)
 	return m.Theme.Color(name, variant)
 }
+
+// ==========================================
+// 3. LOGIKA KALENDER CUSTOM (GRID MANUAL)
+// ==========================================
+// Ini adalah solusi untuk masalah warna. Kita buat grid sendiri.
+
+func createCalendarPopup(parent fyne.Window, initialDate time.Time, onSelected func(time.Time)) {
+	currentMonth := initialDate // Melacak bulan yang sedang dilihat user
+	selectedDate := initialDate // Melacak tanggal yang diklik user
+
+	// Kontainer utama untuk grid tanggal
+	gridContainer := container.New(layout.NewGridLayout(7))
+	
+	// Label Judul (Bulan Tahun)
+	lblHeader := widget.NewLabel("")
+	lblHeader.Alignment = fyne.TextAlignCenter
+	lblHeader.TextStyle = fyne.TextStyle{Bold: true}
+
+	var modal *dialog.CustomDialog // Deklarasi dulu agar bisa ditutup dari dalam
+
+	// Fungsi untuk membangun ulang isi grid
+	var refreshGrid func()
+	refreshGrid = func() {
+		gridContainer.Objects = nil // Kosongkan grid
+
+		// 1. Header Nama Hari (Sen, Sel, Rab...)
+		daysHeader := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
+		for _, dayName := range daysHeader {
+			l := widget.NewLabel(dayName)
+			l.Alignment = fyne.TextAlignCenter
+			l.TextStyle = fyne.TextStyle{Bold: true}
+			gridContainer.Add(l)
+		}
+
+		// 2. Hitung logika tanggal
+		year, month, _ := currentMonth.Date()
+		lblHeader.SetText(fmt.Sprintf("%s %d", BulanIndo[month], year))
+
+		firstDayOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
+		// Cari tahu hari apa tanggal 1 itu (0=Minggu, 1=Senin, dst)
+		startWeekday := int(firstDayOfMonth.Weekday())
+		
+		// Cari tahu jumlah hari dalam bulan ini
+		nextMonth := firstDayOfMonth.AddDate(0, 1, 0)
+		lastDay := nextMonth.Add(-time.Hour * 24).Day()
+
+		// 3. Isi kotak kosong sebelum tanggal 1
+		for i := 0; i < startWeekday; i++ {
+			gridContainer.Add(layout.NewSpacer())
+		}
+
+		// 4. Isi tombol tanggal 1 sampai akhir bulan
+		for d := 1; d <= lastDay; d++ {
+			dayNum := d
+			dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
+			
+			btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
+			
+			// LOGIKA WARNA HIJAU:
+			// Jika tanggal tombol sama dengan tanggal yang dipilih user:
+			// Set tombol jadi HighImportance (karena tema kita HighImportance = Hijau)
+			if dateVal.Year() == selectedDate.Year() && 
+			   dateVal.Month() == selectedDate.Month() && 
+			   dateVal.Day() == selectedDate.Day() {
+				btn.Importance = widget.HighImportance 
+			} else {
+				btn.Importance = widget.MediumImportance // Atau LowImportance (transparan/abu)
+			}
+
+			// Saat tombol tanggal diklik
+			btn.OnTapped = func() {
+				selectedDate = dateVal
+				onSelected(selectedDate) // Callback ke main app
+				refreshGrid() // Refresh tampilan agar warna pindah
+				// Uncomment baris bawah jika ingin dialog langsung nutup setelah pilih tanggal
+				// modal.Hide() 
+			}
+			
+			gridContainer.Add(btn)
+		}
+	}
+
+	// Tombol Navigasi Bulan (Prev / Next)
+	btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
+		currentMonth = currentMonth.AddDate(0, -1, 0)
+		refreshGrid()
+	})
+	btnNext := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
+		currentMonth = currentMonth.AddDate(0, 1, 0)
+		refreshGrid()
+	})
+
+	navContainer := container.NewBorder(nil, nil, btnPrev, btnNext, lblHeader)
+	
+	// Layout Popup
+	content := container.NewVBox(
+		navContainer,
+		container.NewPadded(gridContainer),
+	)
+
+	// Inisialisasi tampilan awal
+	refreshGrid()
+
+	modal = dialog.NewCustom("Pilih Tanggal", "Selesai", content, parent)
+	modal.Resize(fyne.NewSize(350, 400))
+	modal.Show()
+}
+
+
+// ==========================================
+// 4. HELPER UI CARDS
+// ==========================================
 
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
@@ -138,15 +250,12 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 }
 
 // ==========================================
-// 3. MAIN APP
+// 5. MAIN APP
 // ==========================================
 
 func main() {
 	myApp := app.New()
-
-	// TERAPKAN TEMA KUSTOM
-	// Ini akan memaksa tombol "Hitung" dan "Tanggal Terpilih di Kalender" menjadi HIJAU
-	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()})
+	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()}) // Terapkan tema hijau
 
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
 	myWindow.Resize(fyne.NewSize(400, 750))
@@ -178,22 +287,15 @@ func main() {
 	btnSelectDate.Icon = theme.CalendarIcon()
 	btnSelectDate.Importance = widget.LowImportance
 
+	// LOGIKA UTAMA: PANGGIL KALENDER CUSTOM
 	btnSelectDate.OnTapped = func() {
-		// Callback untuk saat tanggal diklik
-		cal := widget.NewCalendar(selectedDate, func(t time.Time) {
-			selectedDate = t
-			btnSelectDate.SetText(t.Format("02/01/2006"))
-			// Dialog akan tetap terbuka sampai tombol "Tutup" ditekan,
-			// tetapi tanggal yang diklik akan berubah warna backgroundnya menjadi Hijau.
+		createCalendarPopup(myWindow, selectedDate, func(newDate time.Time) {
+			selectedDate = newDate
+			btnSelectDate.SetText(newDate.Format("02/01/2006"))
 		})
-
-		d := dialog.NewCustom("Pilih Tanggal", "Tutup", cal, myWindow)
-		d.Resize(fyne.NewSize(300, 300))
-		d.Show()
 	}
 
 	btnCalc := widget.NewButton("Hitung Selamatan", nil)
-	// Penting: HighImportance menggunakan warna Primary (Hijau)
 	btnCalc.Importance = widget.HighImportance
 
 	inputRow := container.NewBorder(nil, nil, nil, nil, btnSelectDate)
@@ -264,7 +366,6 @@ func main() {
 		resultBox.Refresh()
 	}
 
-	// --- Layout Utama ---
 	bgApp := canvas.NewRectangle(ColorBgDark)
 	mainContent := container.NewBorder(
 		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
