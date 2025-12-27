@@ -16,9 +16,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// ==========================================
-// 1. LOGIKA MATEMATIKA & KALENDER
-// ==========================================
+// ... (Bagian 1: LOGIKA MATEMATIKA & KALENDER - Tidak ada perubahan, copy dari kode sebelumnya) ...
+// ... (Pastikan variabel HariIndo, Pasaran, fungsi dateToJDN, dll tetap ada) ...
 
 var (
 	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
@@ -41,17 +40,14 @@ func getJavaneseDate(t time.Time) string {
 	l = l - 10631*n + 354
 	j := (int)((10985 - l) / 5316) * (int)((50 * l) / 17719) + (int)(l / 5670) * (int)((43 * l) / 15238)
 	l = l - (int)((30 - j) / 15) * (int)((17719 * j) / 50) - (int)(j / 16) * (int)((15238 * j) / 43) + 29
-
 	hm := (int)(24 * l) / 709
 	hd := l - (int)(709 * hm) / 24
-
 	namaBulanJawa := ""
 	if hm > 0 && hm < len(BulanJawa) {
 		namaBulanJawa = BulanJawa[hm]
 	} else {
 		namaBulanJawa = "Unknown"
 	}
-
 	return fmt.Sprintf("%d %s", hd, namaBulanJawa)
 }
 
@@ -84,29 +80,24 @@ var (
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
 
-// --- CUSTOM THEME START ---
-// Kita membuat struct tema baru yang mewarisi tema default
+// --- CUSTOM THEME AGAR KALENDER BERUBAH WARNA ---
 type myTheme struct {
 	fyne.Theme
 }
 
-// Kita override method Color
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	// Jika Fyne meminta warna "Primary" (yang dipakai untuk tombol utama dan seleksi kalender)
-	// Kita kembalikan warna HIJAU.
-	if name == theme.ColorNamePrimary {
-		return ColorBadgeGreen // Menggunakan hijau yang sama dengan badge
+	// Memaksa warna Primary, Focus, dan Selection menjadi HIJAU
+	switch name {
+	case theme.ColorNamePrimary, theme.ColorNameFocus, theme.ColorNameSelection:
+		return ColorBadgeGreen
 	}
-	
-	// Untuk elemen lain, gunakan warna default bawaan tema
+	// Sisanya ikuti tema default (Dark)
 	return m.Theme.Color(name, variant)
 }
-// --- CUSTOM THEME END ---
 
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
 	var badgeTextStr string
-
 	switch statusType {
 	case 1:
 		badgeColor = ColorBadgeGreen
@@ -118,38 +109,29 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 		badgeColor = ColorBadgeBlue
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
-
 	lblTitle := canvas.NewText(title, ColorTextWhite)
 	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
-
 	lblSub := canvas.NewText(subTitle, ColorTextGrey)
 	lblSub.TextSize = 12
 	leftCont := container.NewVBox(lblTitle, lblSub)
-
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
 	lblDate.TextSize = 14
 	lblDate.TextStyle = fyne.TextStyle{Bold: true}
-
 	lblWeton := canvas.NewText(wetonStr, ColorTextGrey)
 	lblWeton.Alignment = fyne.TextAlignTrailing
 	lblWeton.TextSize = 11
 	rightCont := container.NewVBox(lblDate, lblWeton)
-
 	topRow := container.NewBorder(nil, nil, leftCont, rightCont)
-
 	lblBadge := canvas.NewText(badgeTextStr, ColorTextWhite)
 	lblBadge.TextSize = 11
 	lblBadge.TextStyle = fyne.TextStyle{Bold: true}
-
 	badgeBg := canvas.NewRectangle(badgeColor)
 	badgeBg.CornerRadius = 12
-
 	badgeCont := container.NewStack(badgeBg, container.NewPadded(lblBadge))
 	botRow := container.NewHBox(badgeCont)
 	content := container.NewVBox(topRow, container.NewPadded(botRow))
-
 	bg := canvas.NewRectangle(ColorCardBg)
 	bg.CornerRadius = 10
 	return container.NewStack(bg, container.NewPadded(content))
@@ -162,7 +144,8 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 func main() {
 	myApp := app.New()
 
-	// Menerapkan Custom Theme agar warna seleksi kalender jadi HIJAU
+	// TERAPKAN TEMA KUSTOM
+	// Ini akan memaksa tombol "Hitung" dan "Tanggal Terpilih di Kalender" menjadi HIJAU
 	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()})
 
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
@@ -173,10 +156,8 @@ func main() {
 	headerTitle := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
 	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
 	headerTitle.TextSize = 18
-
 	headerIcon := canvas.NewImageFromResource(theme.InfoIcon())
 	headerIcon.SetMinSize(fyne.NewSize(30, 30))
-
 	headerStack := container.NewStack(
 		gradient,
 		container.NewPadded(container.NewVBox(
@@ -198,10 +179,12 @@ func main() {
 	btnSelectDate.Importance = widget.LowImportance
 
 	btnSelectDate.OnTapped = func() {
+		// Callback untuk saat tanggal diklik
 		cal := widget.NewCalendar(selectedDate, func(t time.Time) {
 			selectedDate = t
 			btnSelectDate.SetText(t.Format("02/01/2006"))
-			// Dialog bisa ditutup manual oleh user
+			// Dialog akan tetap terbuka sampai tombol "Tutup" ditekan,
+			// tetapi tanggal yang diklik akan berubah warna backgroundnya menjadi Hijau.
 		})
 
 		d := dialog.NewCustom("Pilih Tanggal", "Tutup", cal, myWindow)
@@ -210,13 +193,10 @@ func main() {
 	}
 
 	btnCalc := widget.NewButton("Hitung Selamatan", nil)
-	
-	// CATATAN: Karena kita mengubah Primary Color jadi Hijau, 
-	// tombol HighImportance ini otomatis juga akan berwarna Hijau.
+	// Penting: HighImportance menggunakan warna Primary (Hijau)
 	btnCalc.Importance = widget.HighImportance
 
 	inputRow := container.NewBorder(nil, nil, nil, nil, btnSelectDate)
-
 	inputCardBg := canvas.NewRectangle(ColorCardBg)
 	inputCardBg.CornerRadius = 8
 	inputSection := container.NewStack(
@@ -233,11 +213,9 @@ func main() {
 	lblNote := widget.NewLabel(noteText)
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
-
 	lblCredit := canvas.NewText("Code by Richo", ColorTextGrey)
 	lblCredit.Alignment = fyne.TextAlignCenter
 	lblCredit.TextSize = 10
-
 	footer := container.NewVBox(lblNote, lblCredit)
 	footerCardBg := canvas.NewRectangle(ColorCardBg)
 	footerCardBg.CornerRadius = 8
@@ -249,13 +227,11 @@ func main() {
 	// --- Logic Calculation ---
 	btnCalc.OnTapped = func() {
 		resultBox.Objects = nil
-
 		type Event struct {
 			Name   string
 			Sub    string
 			Offset int
 		}
-
 		events := []Event{
 			{"Geblag", "Hari H", 0},
 			{"Nelung", "3 Hari", 2},
@@ -266,35 +242,22 @@ func main() {
 			{"Pendhak II", "2 Tahun", 707},
 			{"Nyewu", "1000 Hari", 999},
 		}
-
 		t := selectedDate
 		now := time.Now()
-
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 
 		for _, e := range events {
 			targetDate := t.AddDate(0, 0, e.Offset)
 			targetDate = time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, targetDate.Location())
-
 			diff := int(targetDate.Sub(now).Hours() / 24)
-
 			status := 3
 			if diff < 0 {
 				status = 1
 			} else if diff == 0 {
 				status = 2
 			}
-
-			card := createCard(
-				e.Name,
-				e.Sub,
-				formatIndoDate(targetDate),
-				formatWeton(targetDate),
-				status,
-				diff,
-			)
-
+			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), status, diff)
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
 		}
@@ -309,7 +272,6 @@ func main() {
 		nil, nil,
 		scrollArea,
 	)
-
 	myWindow.SetContent(container.NewStack(bgApp, mainContent))
 	myWindow.ShowAndRun()
 }
