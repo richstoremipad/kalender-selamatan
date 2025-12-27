@@ -1,36 +1,21 @@
-name: Build Android APK
-on: [push]
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-
-      - name: Install Dependencies
+      - name: Build APK (arm,arm64)
         run: |
-          go mod tidy
-          go install github.com/fyne-io/fyne-cross@latest
-
-      - name: Build APK (arm,arch64)
-        run: |
-          # Memaksa penggunaan icon.png dari folder utama
+          # Hapus flag -silent agar kita bisa lihat log error jika gagal
           $HOME/go/bin/fyne-cross android \
             -app-id com.kalender.selamatan \
             -name "Cek Selamatan" \
             -arch=arm,arm64 \
             -ldflags="-s -w" \
-            -icon icon.png \
-            -silent
+            -icon=icon.png
+            
+      - name: DEBUG - Cari Lokasi APK
+        # Langkah ini akan menampilkan lokasi file APK di dalam Log (klik panah di step ini nanti)
+        run: find . -name "*.apk"
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: APK-Selamatan-Premium
-          # Jalur diperluas agar mencakup semua sub-folder di dalam dist
-          path: fyne-cross/bin/android/*.apk
+          # Tanda **/*.apk artinya cari file APK di folder MANAPUN di seluruh project
+          path: "**/*.apk"
+
