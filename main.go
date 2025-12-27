@@ -17,7 +17,7 @@ import (
 )
 
 // ==========================================
-// 1. LOGIKA MATEMATIKA & KALENDER (TETAP)
+// 1. LOGIKA MATEMATIKA & KALENDER
 // ==========================================
 
 var (
@@ -69,54 +69,48 @@ func formatIndoDate(t time.Time) string {
 }
 
 // ==========================================
-// 2. THEME & COLORS (UI DESIGN)
+// 2. KOMPONEN UI CUSTOM & COLORS
 // ==========================================
 
-// Custom Theme untuk memaksa warna seleksi kalender menjadi terang (Orange/Gold)
-type myTheme struct{}
-
-func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	if name == theme.ColorNamePrimary {
-		return color.NRGBA{R: 255, G: 152, B: 0, A: 255} // Orange Gold Highlight
-	}
-	if name == theme.ColorNameBackground {
-		return color.NRGBA{R: 30, G: 33, B: 40, A: 255} // Dark BG
-	}
-	return theme.DefaultTheme().Color(name, theme.VariantDark)
-}
-func (m myTheme) Icon(name fyne.ThemeIconName) fyne.Resource {
-	return theme.DefaultTheme().Icon(name)
-}
-func (m myTheme) Font(style fyne.TextStyle) fyne.Resource {
-	return theme.DefaultTheme().Font(style)
-}
-func (m myTheme) Size(name fyne.ThemeSizeName) float32 {
-	return theme.DefaultTheme().Size(name)
-}
-
 var (
-	// Palet Warna Modern
-	ColorBgDark     = color.NRGBA{R: 28, G: 28, B: 32, A: 255}
-	ColorCardBg     = color.NRGBA{R: 44, G: 44, B: 50, A: 255}
-	ColorAccent     = color.NRGBA{R: 255, G: 167, B: 38, A: 255} // Orange Gold
-	ColorTextWhite  = color.NRGBA{R: 245, G: 245, B: 245, A: 255}
-	ColorTextGrey   = color.NRGBA{R: 158, G: 158, B: 158, A: 255}
-	ColorBadgeGreen = color.NRGBA{R: 102, G: 187, B: 106, A: 255} // Soft Green
-	ColorBadgeRed   = color.NRGBA{R: 239, G: 83, B: 80, A: 255}   // Soft Red
-	ColorBadgeBlue  = color.NRGBA{R: 66, G: 165, B: 245, A: 255}  // Soft Blue
-	ColorInputBg    = color.NRGBA{R: 58, G: 58, B: 64, A: 255}
+	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 255}
+	ColorCardBg     = color.NRGBA{R: 45, G: 48, B: 55, A: 255}
+	ColorHeaderTop  = color.NRGBA{R: 40, G: 180, B: 160, A: 255}
+	ColorHeaderBot  = color.NRGBA{R: 50, G: 80, B: 160, A: 255}
+	ColorTextWhite  = color.NRGBA{R: 255, G: 255, B: 255, A: 255}
+	ColorTextGrey   = color.NRGBA{R: 180, G: 180, B: 180, A: 255}
+	ColorBadgeGreen = color.NRGBA{R: 46, G: 125, B: 50, A: 255}
+	ColorBadgeRed   = color.NRGBA{R: 198, G: 40, B: 40, A: 255}
+	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
 
-// Komponen Kartu Hasil
+// --- CUSTOM THEME START ---
+// Kita membuat struct tema baru yang mewarisi tema default
+type myTheme struct {
+	fyne.Theme
+}
+
+// Kita override method Color
+func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	// Jika Fyne meminta warna "Primary" (yang dipakai untuk tombol utama dan seleksi kalender)
+	// Kita kembalikan warna HIJAU.
+	if name == theme.ColorNamePrimary {
+		return ColorBadgeGreen // Menggunakan hijau yang sama dengan badge
+	}
+	
+	// Untuk elemen lain, gunakan warna default bawaan tema
+	return m.Theme.Color(name, variant)
+}
+// --- CUSTOM THEME END ---
+
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
 	var badgeTextStr string
 
-	// Logika Badge
 	switch statusType {
 	case 1:
 		badgeColor = ColorBadgeGreen
-		badgeTextStr = fmt.Sprintf("✓ Selesai (%d hari lalu)", int(math.Abs(float64(diffDays))))
+		badgeTextStr = fmt.Sprintf("✓ Sudah Lewat (%d hari)", int(math.Abs(float64(diffDays))))
 	case 2:
 		badgeColor = ColorBadgeRed
 		badgeTextStr = "🔔 HARI INI!"
@@ -125,51 +119,40 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
 
-	// Layout Text
-	lblTitle := canvas.NewText(title, ColorAccent) // Judul berwarna aksen
-	lblTitle.TextSize = 18
+	lblTitle := canvas.NewText(title, ColorTextWhite)
+	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 
 	lblSub := canvas.NewText(subTitle, ColorTextGrey)
-	lblSub.TextSize = 14
+	lblSub.TextSize = 12
+	leftCont := container.NewVBox(lblTitle, lblSub)
 
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
-	lblDate.TextSize = 16
+	lblDate.TextSize = 14
 	lblDate.TextStyle = fyne.TextStyle{Bold: true}
 
 	lblWeton := canvas.NewText(wetonStr, ColorTextGrey)
 	lblWeton.Alignment = fyne.TextAlignTrailing
-	lblWeton.TextSize = 12
+	lblWeton.TextSize = 11
+	rightCont := container.NewVBox(lblDate, lblWeton)
 
-	// Susunan Header Kartu
-	headerRow := container.NewBorder(nil, nil,
-		container.NewVBox(lblTitle, lblSub),
-		container.NewVBox(lblDate, lblWeton),
-	)
+	topRow := container.NewBorder(nil, nil, leftCont, rightCont)
 
-	// Badge Style
 	lblBadge := canvas.NewText(badgeTextStr, ColorTextWhite)
-	lblBadge.TextSize = 12
+	lblBadge.TextSize = 11
 	lblBadge.TextStyle = fyne.TextStyle{Bold: true}
-	
+
 	badgeBg := canvas.NewRectangle(badgeColor)
-	badgeBg.CornerRadius = 8
+	badgeBg.CornerRadius = 12
+
 	badgeCont := container.NewStack(badgeBg, container.NewPadded(lblBadge))
-	
-	// Gabung Konten
-	content := container.NewVBox(
-		headerRow,
-		layout.NewSpacer(),
-		container.NewHBox(badgeCont), // Badge di kiri bawah
-	)
+	botRow := container.NewHBox(badgeCont)
+	content := container.NewVBox(topRow, container.NewPadded(botRow))
 
-	// Background Kartu
 	bg := canvas.NewRectangle(ColorCardBg)
-	bg.CornerRadius = 12
-
-	// Shadow effect (simulated with border/color)
-	return container.NewStack(bg, container.NewPadded(container.NewPadded(content)))
+	bg.CornerRadius = 10
+	return container.NewStack(bg, container.NewPadded(content))
 }
 
 // ==========================================
@@ -178,111 +161,94 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 
 func main() {
 	myApp := app.New()
-	
-	// Terapkan Custom Theme agar Kalender terlihat kontras
-	myApp.Settings().SetTheme(&myTheme{})
-	
+
+	// Menerapkan Custom Theme agar warna seleksi kalender jadi HIJAU
+	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()})
+
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
-	myWindow.Resize(fyne.NewSize(420, 800))
+	myWindow.Resize(fyne.NewSize(400, 750))
 
-	// --- 1. Header Section ---
-	// Background Gradient Header
-	headerBg := canvas.NewHorizontalGradient(color.NRGBA{R: 33, G: 150, B: 243, A: 255}, color.NRGBA{R: 21, G: 101, B: 192, A: 255})
-	
-	titleText := canvas.NewText("Selamatan Jawa", ColorTextWhite)
-	titleText.TextStyle = fyne.TextStyle{Bold: true}
-	titleText.TextSize = 24
-	
-	subTitleText := canvas.NewText("Hitung peringatan kematian & weton", color.NRGBA{R: 200, G: 200, B: 200, A: 255})
-	subTitleText.TextSize = 12
+	// Header
+	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
+	headerTitle := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
+	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
+	headerTitle.TextSize = 18
 
-	headerContent := container.NewVBox(
-		titleText,
-		subTitleText,
+	headerIcon := canvas.NewImageFromResource(theme.InfoIcon())
+	headerIcon.SetMinSize(fyne.NewSize(30, 30))
+
+	headerStack := container.NewStack(
+		gradient,
+		container.NewPadded(container.NewVBox(
+			layout.NewSpacer(),
+			container.NewHBox(layout.NewSpacer(), headerIcon, headerTitle, layout.NewSpacer()),
+			layout.NewSpacer(),
+		)),
 	)
+	headerContainer := container.NewVBox(headerStack)
 
-	headerContainer := container.NewStack(
-		headerBg,
-		container.NewPadded(container.NewPadded(headerContent)),
-	)
-
-	// --- 2. Input Section Custom ---
-	inputLabel := canvas.NewText("Pilih Tanggal Geblag (Wafat):", ColorTextGrey)
-	inputLabel.TextSize = 14
+	// --- Input Section ---
+	inputLabel := canvas.NewText("Pilih Tanggal Geblag / Wafat:", ColorTextGrey)
+	inputLabel.TextSize = 12
 
 	selectedDate := time.Now()
 
-	// Membuat tampilan Custom untuk tombol Tanggal agar lebih cantik
-	// Text tanggal akan kita ubah warnanya (ColorAccent)
-	lblSelectedDate := canvas.NewText(selectedDate.Format("02 January 2006"), ColorAccent)
-	lblSelectedDate.TextSize = 18
-	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
-	
-	iconCal := widget.NewIcon(theme.CalendarIcon())
-	
-	inputBg := canvas.NewRectangle(ColorInputBg)
-	inputBg.CornerRadius = 10
-	inputBg.StrokeColor = ColorTextGrey
-	inputBg.StrokeWidth = 1
+	btnSelectDate := widget.NewButton(selectedDate.Format("02/01/2006"), nil)
+	btnSelectDate.Icon = theme.CalendarIcon()
+	btnSelectDate.Importance = widget.LowImportance
 
-	// Container untuk teks tanggal (Custom Widget behavior)
-	dateDisplay := container.NewStack(
-		inputBg,
-		container.NewPadded(
-			container.NewHBox(
-				iconCal,
-				layout.NewSpacer(),
-				lblSelectedDate,
-				layout.NewSpacer(),
-			),
-		),
-	)
-
-	// Membuat dateDisplay bisa diklik
-	btnSelectDate := widget.NewButton("", nil) // Tombol transparan di atas display
 	btnSelectDate.OnTapped = func() {
 		cal := widget.NewCalendar(selectedDate, func(t time.Time) {
 			selectedDate = t
-			// Update Teks dan Warna saat dipilih
-			lblSelectedDate.Text = formatIndoDate(t)
-			lblSelectedDate.Color = ColorAccent // Pastikan warna Emas/Orange
-			lblSelectedDate.Refresh()
+			btnSelectDate.SetText(t.Format("02/01/2006"))
+			// Dialog bisa ditutup manual oleh user
 		})
-		
-		d := dialog.NewCustom("Pilih Tanggal Wafat", "Tutup", cal, myWindow)
-		d.Resize(fyne.NewSize(320, 350))
+
+		d := dialog.NewCustom("Pilih Tanggal", "Tutup", cal, myWindow)
+		d.Resize(fyne.NewSize(300, 300))
 		d.Show()
 	}
-	
-	// Stack tombol transparan diatas visual dateDisplay
-	datePickerContainer := container.NewStack(dateDisplay, btnSelectDate)
 
-	btnCalc := widget.NewButton("HITUNG SELAMATAN", nil)
+	btnCalc := widget.NewButton("Hitung Selamatan", nil)
+	
+	// CATATAN: Karena kita mengubah Primary Color jadi Hijau, 
+	// tombol HighImportance ini otomatis juga akan berwarna Hijau.
 	btnCalc.Importance = widget.HighImportance
 
-	inputSection := container.NewVBox(
-		inputLabel,
-		datePickerContainer,
-		layout.NewSpacer(),
-		btnCalc,
+	inputRow := container.NewBorder(nil, nil, nil, nil, btnSelectDate)
+
+	inputCardBg := canvas.NewRectangle(ColorCardBg)
+	inputCardBg.CornerRadius = 8
+	inputSection := container.NewStack(
+		inputCardBg,
+		container.NewPadded(container.NewVBox(inputLabel, inputRow, layout.NewSpacer(), btnCalc)),
 	)
 
-	// --- 3. Result Section ---
+	// --- Result Container ---
 	resultBox := container.NewVBox()
-	
-	// Pesan awal kosong
-	emptyImg := widget.NewIcon(theme.SearchIcon())
-	emptyText := canvas.NewText("Pilih tanggal lalu klik Hitung", ColorTextGrey)
-	emptyText.Alignment = fyne.TextAlignCenter
-	emptyState := container.NewVBox(layout.NewSpacer(), emptyImg, emptyText, layout.NewSpacer())
-	
-	resultBox.Add(emptyState)
-
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
-	// --- 4. Logic Calculation ---
+	// --- Footer ---
+	noteText := "Notes: Perhitungan ini menggunakan rumus (3, 7, 40, 100, Pendhak 1 & 2, 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa."
+	lblNote := widget.NewLabel(noteText)
+	lblNote.Wrapping = fyne.TextWrapWord
+	lblNote.TextStyle = fyne.TextStyle{Italic: true}
+
+	lblCredit := canvas.NewText("Code by Richo", ColorTextGrey)
+	lblCredit.Alignment = fyne.TextAlignCenter
+	lblCredit.TextSize = 10
+
+	footer := container.NewVBox(lblNote, lblCredit)
+	footerCardBg := canvas.NewRectangle(ColorCardBg)
+	footerCardBg.CornerRadius = 8
+	footerSection := container.NewStack(
+		footerCardBg,
+		container.NewPadded(footer),
+	)
+
+	// --- Logic Calculation ---
 	btnCalc.OnTapped = func() {
-		resultBox.Objects = nil // Clear previous results
+		resultBox.Objects = nil
 
 		type Event struct {
 			Name   string
@@ -303,8 +269,7 @@ func main() {
 
 		t := selectedDate
 		now := time.Now()
-		
-		// Normalisasi jam ke 00:00
+
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 
@@ -314,11 +279,11 @@ func main() {
 
 			diff := int(targetDate.Sub(now).Hours() / 24)
 
-			status := 3 // Future
+			status := 3
 			if diff < 0 {
-				status = 1 // Past
+				status = 1
 			} else if diff == 0 {
-				status = 2 // Today
+				status = 2
 			}
 
 			card := createCard(
@@ -329,33 +294,18 @@ func main() {
 				status,
 				diff,
 			)
-			
+
 			resultBox.Add(card)
-			resultBox.Add(layout.NewSpacer()) // Spacing antar kartu
+			resultBox.Add(layout.NewSpacer())
 		}
 		resultBox.Refresh()
-		scrollArea.Refresh()
 	}
 
-	// --- 5. Footer ---
-	noteText := widget.NewLabel("Catatan: Perhitungan menggunakan rumus baku (3, 7, 40, 100, Pendhak, 1000). Pendhak dihitung 354 hari (Kalender Jawa/Islam).")
-	noteText.Wrapping = fyne.TextWrapWord
-	noteText.TextStyle = fyne.TextStyle{Italic: true}
-	
-	footerContainer := container.NewPadded(noteText)
-
-	// --- 6. Final Layout Assembly ---
+	// --- Layout Utama ---
 	bgApp := canvas.NewRectangle(ColorBgDark)
-	
-	topContent := container.NewVBox(
-		headerContainer, 
-		container.NewPadded(inputSection),
-		widget.NewSeparator(),
-	)
-
 	mainContent := container.NewBorder(
-		topContent,
-		footerContainer,
+		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
+		container.NewPadded(footerSection),
 		nil, nil,
 		scrollArea,
 	)
