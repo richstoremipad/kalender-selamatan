@@ -17,13 +17,14 @@ jobs:
           go mod tidy
           go install github.com/fyne-io/fyne-cross@latest
 
-      - name: Build APK (arm)
+      - name: Build APK (arm,arch64)
         run: |
           # Memaksa penggunaan icon.png dari folder utama
           $HOME/go/bin/fyne-cross android \
             -app-id com.kalender.selamatan \
             -name "Cek Selamatan" \
-            -arch arm \
+            -arch arm,arm64 \
+            -ldflags="-s -w" \
             -icon icon.png \
             -silent
 
