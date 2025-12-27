@@ -27,14 +27,10 @@ jobs:
             -ldflags="-s -w" \
             -icon=icon.png
             
-      - name: DEBUG - Cari Lokasi APK
-        # Langkah ini akan menampilkan lokasi file APK di dalam Log (klik panah di step ini nanti)
-        run: find . -name "*.apk"
-
-      - name: Upload Artifact
+            - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: APK-Selamatan-Premium
           # Tanda **/*.apk artinya cari file APK di folder MANAPUN di seluruh project
-          path: "**/*.apk"
+          path: "fyne-cross/dist/**/*.apk"
 
