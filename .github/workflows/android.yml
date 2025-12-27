@@ -17,7 +17,7 @@ jobs:
           go mod tidy
           go install github.com/fyne-io/fyne-cross@latest
 
-            - name: Build APK (arm,arm64)
+      - name: Build APK (arm,arm64)
         run: |
           # Hapus flag -silent agar kita bisa lihat log error jika gagal
           $HOME/go/bin/fyne-cross android \
