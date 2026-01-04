@@ -95,9 +95,9 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 // 3. LOGIKA KALENDER CUSTOM (GRID MANUAL)
 // ==========================================
 
-// createCalendarPopup sekarang menggunakan ModalPopUp agar kita bisa
-// membuat tombol "Hitung" custom yang berwarna (HighImportance).
-func createCalendarPopup(canvas fyne.Canvas, initialDate time.Time, onCalculate func(time.Time)) {
+// PERBAIKAN: Parameter diubah dari 'canvas' menjadi 'parentCanvas'
+// untuk menghindari bentrok dengan nama paket 'canvas'.
+func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 
@@ -148,7 +148,6 @@ func createCalendarPopup(canvas fyne.Canvas, initialDate time.Time, onCalculate 
 				btn.Importance = widget.MediumImportance
 			}
 
-			// Saat tanggal diklik, update state dan refresh tampilan
 			btn.OnTapped = func() {
 				selectedDate = dateVal
 				refreshGrid()
@@ -169,7 +168,6 @@ func createCalendarPopup(canvas fyne.Canvas, initialDate time.Time, onCalculate 
 
 	navContainer := container.NewBorder(nil, nil, btnPrev, btnNext, lblHeader)
 	
-	// Tombol HITUNG BERWARNA (HighImportance)
 	btnHitung := widget.NewButton("Hitung", func() {
 		if popup != nil {
 			popup.Hide()
@@ -179,7 +177,6 @@ func createCalendarPopup(canvas fyne.Canvas, initialDate time.Time, onCalculate 
 	btnHitung.Importance = widget.HighImportance
 	btnHitung.Icon = theme.ConfirmIcon()
 
-	// Tombol Batal (Opsional, agar user bisa keluar tanpa menghitung)
 	btnBatal := widget.NewButton("Batal", func() {
 		if popup != nil {
 			popup.Hide()
@@ -196,16 +193,16 @@ func createCalendarPopup(canvas fyne.Canvas, initialDate time.Time, onCalculate 
 		container.NewPadded(buttonRow),
 	)
 
-	// Bungkus content dalam Card agar background terlihat bagus di atas modal
+	// Sekarang 'canvas.NewRectangle' aman dipanggil karena parameter fungsi namanya 'parentCanvas'
 	cardWrapper := container.NewStack(
-		canvas.NewRectangle(ColorCardBg), // Background popup
+		canvas.NewRectangle(ColorCardBg), 
 		container.NewPadded(content),
 	)
 
 	refreshGrid()
 
-	// Menggunakan NewModalPopUp untuk fleksibilitas penuh
-	popup = widget.NewModalPopUp(cardWrapper, canvas)
+	// Gunakan parentCanvas disini
+	popup = widget.NewModalPopUp(cardWrapper, parentCanvas)
 	popup.Resize(fyne.NewSize(350, 420))
 	popup.Show()
 }
@@ -359,7 +356,6 @@ func main() {
 	btnOpenCalc.Icon = theme.CalendarIcon()
 
 	btnOpenCalc.OnTapped = func() {
-		// Gunakan canvas window sebagai parent popup
 		createCalendarPopup(myWindow.Canvas(), calcDate, func(selected time.Time) {
 			calcDate = selected
 			performCalculation(calcDate)
