@@ -234,7 +234,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	}
 
 	// --- TOMBOL ACTION BAWAH (Hanya Hitung) ---
-	// Tombol Batal dihapus agar menggunakan Back Button HP / Klik luar area
 	btnHitung := widget.NewButton("Hitung", func() {
 		if popup != nil {
 			popup.Hide()
@@ -244,10 +243,13 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	btnHitung.Importance = widget.HighImportance
 	btnHitung.Icon = theme.ConfirmIcon()
 
+	// MODIFIKASI: Tombol Hitung dibungkus container.NewCenter agar tidak melebar
+	bottomContainer := container.NewPadded(container.NewCenter(btnHitung))
+
 	// Layout Utama Popup
 	finalLayout := container.NewBorder(
 		nil, // Top
-		container.NewPadded(btnHitung), // Bottom (Hanya tombol Hitung)
+		bottomContainer, // Bottom (Tombol Hitung Ramping)
 		nil, nil, // Left Right
 		contentStack, // Center
 	)
@@ -429,13 +431,14 @@ func main() {
 	inputCardBg := canvas.NewRectangle(ColorCardBg)
 	inputCardBg.CornerRadius = 8
 	
+	// MODIFIKASI: Membungkus tombol utama dengan container.NewCenter agar tidak melebar
 	inputSection := container.NewStack(
 		inputCardBg,
 		container.NewPadded(container.NewVBox(
 			lblDateTitle, 
 			inputRow, 
 			layout.NewSpacer(), 
-			btnOpenCalc,
+			container.NewCenter(btnOpenCalc), // <--- Tombol jadi ramping (centered)
 		)),
 	)
 
