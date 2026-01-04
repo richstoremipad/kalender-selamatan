@@ -19,7 +19,6 @@ import (
 // ==========================================
 // 1. LOGIKA MATEMATIKA & KALENDER JAWA
 // ==========================================
-// (Tidak ada perubahan di bagian ini)
 
 var (
 	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
@@ -82,13 +81,11 @@ var (
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
 )
 
-// --- TEMA: Memaksa tombol HighImportance jadi Hijau ---
 type myTheme struct {
 	fyne.Theme
 }
 
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	// Kita memaksa warna Primary (yang dipakai tombol HighImportance) jadi Hijau
 	if name == theme.ColorNamePrimary {
 		return ColorBadgeGreen
 	}
@@ -98,28 +95,25 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 // ==========================================
 // 3. LOGIKA KALENDER CUSTOM (GRID MANUAL)
 // ==========================================
-// Ini adalah solusi untuk masalah warna. Kita buat grid sendiri.
 
-func createCalendarPopup(parent fyne.Window, initialDate time.Time, onSelected func(time.Time)) {
-	currentMonth := initialDate // Melacak bulan yang sedang dilihat user
-	selectedDate := initialDate // Melacak tanggal yang diklik user
+// createCalendarPopup sekarang menerima callback 'onCalculate'
+// yang akan dijalankan ketika tombol "Hitung" (di dialog) ditekan.
+func createCalendarPopup(parent fyne.Window, initialDate time.Time, onCalculate func(time.Time)) {
+	currentMonth := initialDate
+	selectedDate := initialDate
 
-	// Kontainer utama untuk grid tanggal
 	gridContainer := container.New(layout.NewGridLayout(7))
 	
-	// Label Judul (Bulan Tahun)
 	lblHeader := widget.NewLabel("")
 	lblHeader.Alignment = fyne.TextAlignCenter
 	lblHeader.TextStyle = fyne.TextStyle{Bold: true}
 
-	var modal *dialog.CustomDialog // Deklarasi dulu agar bisa ditutup dari dalam
+	var modal *dialog.CustomDialog
 
-	// Fungsi untuk membangun ulang isi grid
 	var refreshGrid func()
 	refreshGrid = func() {
-		gridContainer.Objects = nil // Kosongkan grid
+		gridContainer.Objects = nil
 
-		// 1. Header Nama Hari (Sen, Sel, Rab...)
 		daysHeader := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
 		for _, dayName := range daysHeader {
 			l := widget.NewLabel(dayName)
@@ -128,55 +122,44 @@ func createCalendarPopup(parent fyne.Window, initialDate time.Time, onSelected f
 			gridContainer.Add(l)
 		}
 
-		// 2. Hitung logika tanggal
 		year, month, _ := currentMonth.Date()
 		lblHeader.SetText(fmt.Sprintf("%s %d", BulanIndo[month], year))
 
 		firstDayOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
-		// Cari tahu hari apa tanggal 1 itu (0=Minggu, 1=Senin, dst)
 		startWeekday := int(firstDayOfMonth.Weekday())
 		
-		// Cari tahu jumlah hari dalam bulan ini
 		nextMonth := firstDayOfMonth.AddDate(0, 1, 0)
 		lastDay := nextMonth.Add(-time.Hour * 24).Day()
 
-		// 3. Isi kotak kosong sebelum tanggal 1
 		for i := 0; i < startWeekday; i++ {
 			gridContainer.Add(layout.NewSpacer())
 		}
 
-		// 4. Isi tombol tanggal 1 sampai akhir bulan
 		for d := 1; d <= lastDay; d++ {
 			dayNum := d
 			dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
 			
 			btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
 			
-			// LOGIKA WARNA HIJAU:
-			// Jika tanggal tombol sama dengan tanggal yang dipilih user:
-			// Set tombol jadi HighImportance (karena tema kita HighImportance = Hijau)
 			if dateVal.Year() == selectedDate.Year() && 
 			   dateVal.Month() == selectedDate.Month() && 
 			   dateVal.Day() == selectedDate.Day() {
 				btn.Importance = widget.HighImportance 
 			} else {
-				btn.Importance = widget.MediumImportance // Atau LowImportance (transparan/abu)
+				btn.Importance = widget.MediumImportance
 			}
 
-			// Saat tombol tanggal diklik
+			// Saat tanggal diklik, kita hanya update variabel selectedDate dan refresh warna
+			// User harus klik "Hitung" di bawah untuk memproses
 			btn.OnTapped = func() {
 				selectedDate = dateVal
-				onSelected(selectedDate) // Callback ke main app
-				refreshGrid() // Refresh tampilan agar warna pindah
-				// Uncomment baris bawah jika ingin dialog langsung nutup setelah pilih tanggal
-				// modal.Hide() 
+				refreshGrid()
 			}
 			
 			gridContainer.Add(btn)
 		}
 	}
 
-	// Tombol Navigasi Bulan (Prev / Next)
 	btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 		currentMonth = currentMonth.AddDate(0, -1, 0)
 		refreshGrid()
@@ -188,17 +171,22 @@ func createCalendarPopup(parent fyne.Window, initialDate time.Time, onSelected f
 
 	navContainer := container.NewBorder(nil, nil, btnPrev, btnNext, lblHeader)
 	
-	// Layout Popup
 	content := container.NewVBox(
 		navContainer,
 		container.NewPadded(gridContainer),
 	)
 
-	// Inisialisasi tampilan awal
 	refreshGrid()
 
-	modal = dialog.NewCustom("Pilih Tanggal", "Selesai", content, parent)
+	// MODIFIKASI: Tombol dismiss diganti jadi "Hitung"
+	modal = dialog.NewCustom("Pilih Tanggal Geblag", "Hitung", content, parent)
 	modal.Resize(fyne.NewSize(350, 400))
+	
+	// MODIFIKASI: Saat dialog ditutup (tombol Hitung ditekan), jalankan callback
+	modal.SetOnClosed(func() {
+		onCalculate(selectedDate)
+	})
+
 	modal.Show()
 }
 
@@ -255,7 +243,7 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 
 func main() {
 	myApp := app.New()
-	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()}) // Terapkan tema hijau
+	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()}) 
 
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
 	myWindow.Resize(fyne.NewSize(400, 750))
@@ -277,58 +265,18 @@ func main() {
 	)
 	headerContainer := container.NewVBox(headerStack)
 
-	// --- Input Section ---
-	inputLabel := canvas.NewText("Pilih Tanggal Geblag / Wafat:", ColorTextGrey)
-	inputLabel.TextSize = 12
-
-	selectedDate := time.Now()
-
-	btnSelectDate := widget.NewButton(selectedDate.Format("02/01/2006"), nil)
-	btnSelectDate.Icon = theme.CalendarIcon()
-	btnSelectDate.Importance = widget.LowImportance
-
-	// LOGIKA UTAMA: PANGGIL KALENDER CUSTOM
-	btnSelectDate.OnTapped = func() {
-		createCalendarPopup(myWindow, selectedDate, func(newDate time.Time) {
-			selectedDate = newDate
-			btnSelectDate.SetText(newDate.Format("02/01/2006"))
-		})
-	}
-
-	btnCalc := widget.NewButton("Hitung Selamatan", nil)
-	btnCalc.Importance = widget.HighImportance
-
-	inputRow := container.NewBorder(nil, nil, nil, nil, btnSelectDate)
-	inputCardBg := canvas.NewRectangle(ColorCardBg)
-	inputCardBg.CornerRadius = 8
-	inputSection := container.NewStack(
-		inputCardBg,
-		container.NewPadded(container.NewVBox(inputLabel, inputRow, layout.NewSpacer(), btnCalc)),
-	)
-
-	// --- Result Container ---
+	// --- Result Container (Disiapkan dulu agar bisa diakses button) ---
 	resultBox := container.NewVBox()
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
-	// --- Footer ---
-	noteText := "Notes: Perhitungan ini menggunakan rumus (3, 7, 40, 100, Pendhak 1 & 2, 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa."
-	lblNote := widget.NewLabel(noteText)
-	lblNote.Wrapping = fyne.TextWrapWord
-	lblNote.TextStyle = fyne.TextStyle{Italic: true}
-	lblCredit := canvas.NewText("Code by Richo", ColorTextGrey)
-	lblCredit.Alignment = fyne.TextAlignCenter
-	lblCredit.TextSize = 10
-	footer := container.NewVBox(lblNote, lblCredit)
-	footerCardBg := canvas.NewRectangle(ColorCardBg)
-	footerCardBg.CornerRadius = 8
-	footerSection := container.NewStack(
-		footerCardBg,
-		container.NewPadded(footer),
-	)
+	// Variable untuk menyimpan tanggal perhitungan (default hari ini)
+	calcDate := time.Now()
 
-	// --- Logic Calculation ---
-	btnCalc.OnTapped = func() {
+	// --- Logic Calculation Function ---
+	performCalculation := func(t time.Time) {
+		// Bersihkan hasil sebelumnya
 		resultBox.Objects = nil
+		
 		type Event struct {
 			Name   string
 			Sub    string
@@ -344,7 +292,8 @@ func main() {
 			{"Pendhak II", "2 Tahun", 707},
 			{"Nyewu", "1000 Hari", 999},
 		}
-		t := selectedDate
+		
+		// Normalisasi waktu ke 00:00:00
 		now := time.Now()
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
@@ -365,6 +314,63 @@ func main() {
 		}
 		resultBox.Refresh()
 	}
+
+	// --- Input Section UI ---
+	inputLabel := canvas.NewText("Tanggal Hari Ini:", ColorTextGrey)
+	inputLabel.TextSize = 12
+
+	// MODIFIKASI: Mengganti tombol date picker lama dengan label statis "Hari Ini"
+	todayStr := fmt.Sprintf("%s", formatIndoDate(time.Now()))
+	lblToday := widget.NewLabel(todayStr)
+	lblToday.Alignment = fyne.TextAlignCenter
+	lblToday.TextStyle = fyne.TextStyle{Bold: true}
+	
+	// Tombol Utama untuk Membuka Popup dan Hitung
+	btnOpenCalc := widget.NewButton("Hitung Selamatan", nil)
+	btnOpenCalc.Importance = widget.HighImportance
+	btnOpenCalc.Icon = theme.CalendarIcon()
+
+	// MODIFIKASI LOGIKA TOMBOL HITUNG:
+	// 1. Klik tombol ini -> Buka Popup
+	// 2. Pilih tanggal di Popup
+	// 3. Klik "Hitung" di Popup -> Jalankan performCalculation
+	btnOpenCalc.OnTapped = func() {
+		createCalendarPopup(myWindow, calcDate, func(selected time.Time) {
+			// Callback ini jalan setelah tombol "Hitung" di popup ditekan
+			calcDate = selected
+			performCalculation(calcDate)
+		})
+	}
+
+	inputRow := container.NewBorder(nil, nil, nil, nil, lblToday)
+	inputCardBg := canvas.NewRectangle(ColorCardBg)
+	inputCardBg.CornerRadius = 8
+	
+	inputSection := container.NewStack(
+		inputCardBg,
+		container.NewPadded(container.NewVBox(
+			inputLabel, 
+			inputRow, 
+			layout.NewSpacer(), 
+			btnOpenCalc, // Tombol hitung sekarang disini
+		)),
+	)
+
+	// --- Footer ---
+	noteText := "Notes: Perhitungan ini menggunakan rumus (3, 7, 40, 100, Pendhak 1 & 2, 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa."
+	lblNote := widget.NewLabel(noteText)
+	lblNote.Wrapping = fyne.TextWrapWord
+	lblNote.TextStyle = fyne.TextStyle{Italic: true}
+	lblCredit := canvas.NewText("Code by Richo", ColorTextGrey)
+	lblCredit.Alignment = fyne.TextAlignCenter
+	lblCredit.TextSize = 10
+	footer := container.NewVBox(lblNote, lblCredit)
+	footerCardBg := canvas.NewRectangle(ColorCardBg)
+	footerCardBg.CornerRadius = 8
+	footerSection := container.NewStack(
+		footerCardBg,
+		container.NewPadded(footer),
+	)
 
 	bgApp := canvas.NewRectangle(ColorBgDark)
 	mainContent := container.NewBorder(
