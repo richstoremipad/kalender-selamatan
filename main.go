@@ -438,7 +438,7 @@ func main() {
 	)
 
 	// --- Footer ---
-	noteText := "Notes: Perhitungan ini menggunakan rumus (3, 7, 40, 100, Pendhak 1 & 2, 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa."
+	noteText := "Notes: Perhitungan ini menggunakan rumus jawa (lusarlu hingga nemsarmo). Jikapun ada selisih 1 hari, tidak jadi masalahah karena perbedaan penentuan awal bulan Hijriah/Jawa."
 	lblNote := widget.NewLabel(noteText)
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
