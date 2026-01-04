@@ -89,7 +89,7 @@ var (
 	ColorBadgeGreen = color.NRGBA{R: 46, G: 125, B: 50, A: 255}
 	ColorBadgeRed   = color.NRGBA{R: 198, G: 40, B: 40, A: 255}
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
-	ColorTextOrange = color.NRGBA{R: 255, G: 165, B: 0, A: 255} // Warna Orange Baru
+	ColorTextOrange = color.NRGBA{R: 255, G: 165, B: 0, A: 255}
 )
 
 type myTheme struct {
@@ -97,11 +97,15 @@ type myTheme struct {
 }
 
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	// Custom Hook: Jika ada request warna bernama "orange", return warna orange kita
+	// Custom Hook: Warna Orange
 	if name == "orange" {
 		return ColorTextOrange
 	}
-	
+	// Custom Hook: Warna Merah (untuk teks Pendhak)
+	if name == "red" {
+		return ColorBadgeRed
+	}
+
 	if name == theme.ColorNamePrimary {
 		return ColorBadgeGreen
 	}
@@ -438,26 +442,43 @@ func main() {
 	)
 
 	// --- Footer ---
-	// MODIFIKASI: Menggunakan RichText agar "Notes:" bisa berwarna Orange
-	// Isi notes tetap warna default (Abu/Putih sesuai tema)
+	// MODIFIKASI: RichText dengan 3 Segmen Warna (Orange, Default, Red)
 	richNote := widget.NewRichText(
+		// 1. Judul (Orange)
 		&widget.TextSegment{
 			Text: "Notes: ",
 			Style: widget.RichTextStyle{
-				ColorName: "orange", // Request warna orange ke tema
+				ColorName: "orange", 
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
+		// 2. Teks Awal (Default)
 		&widget.TextSegment{
-			Text: "Perhitungan ini menggunakan rumus (3, 7, 40, 100, Pendhak 1 & 2, 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa.",
+			Text: "Perhitungan ini menggunakan rumus (3, 7, 40, 100, ",
+			Style: widget.RichTextStyle{
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true},
+			},
+		},
+		// 3. Teks Khusus (MERAH)
+		&widget.TextSegment{
+			Text: "Pendhak 1 & 2",
+			Style: widget.RichTextStyle{
+				ColorName: "red", // Request warna merah ke tema
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
+			},
+		},
+		// 4. Teks Akhir (Default)
+		&widget.TextSegment{
+			Text: ", 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa.",
 			Style: widget.RichTextStyle{
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true},
 			},
 		},
 	)
-	// Agar teks notes membungkus (wrap) ke bawah jika panjang
 	richNote.Wrapping = fyne.TextWrapWord
 
 	
