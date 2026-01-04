@@ -1,7 +1,7 @@
 package main
 
 import (
-	"embed"
+	_"embed"
 	"fmt"
 	"image/color"
 	"math"
