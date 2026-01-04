@@ -463,7 +463,7 @@ func main() {
 		},
 		// 3. Teks Khusus (MERAH)
 		&widget.TextSegment{
-			Text: "lusarlu",
+			Text: "lusarlu ",
 			Style: widget.RichTextStyle{
 				ColorName: "red", // Request warna merah ke tema
 				Inline:    true,
