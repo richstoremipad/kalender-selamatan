@@ -131,12 +131,10 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				refreshContent()
 			})
 			
-			// Navigasi
 			topNav := container.NewBorder(nil, nil, btnPrev, btnNext, container.NewCenter(btnHeader))
 
-			// Grid
 			gridDays := container.New(layout.NewGridLayout(7))
-			daysHeader := []string{"M", "S", "S", "R", "K", "J", "S"} // Disingkat agar lebih kecil
+			daysHeader := []string{"M", "S", "S", "R", "K", "J", "S"} 
 			for _, dayName := range daysHeader {
 				l := widget.NewLabel(dayName)
 				l.Alignment = fyne.TextAlignCenter
@@ -224,7 +222,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		contentStack.Refresh()
 	}
 
-	// Tombol Hitung
 	btnHitung := widget.NewButton("Hitung", func() {
 		if popup != nil { popup.Hide() }
 		onCalculate(selectedDate)
@@ -235,30 +232,21 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 	refreshContent()
 
-	// --- SETUP POPUP FIX SIZE ---
-	
-	// Layout Akhir: Isi + Tombol Bawah
 	finalLayout := container.NewBorder(
 		nil, 
 		container.NewPadded(bottomArea), 
 		nil, nil, 
-		contentStack, // Isi (Tengah)
+		contentStack, 
 	)
 
-	// Background dengan Ukuran PAKSA (280x330)
 	bgRect := canvas.NewRectangle(ColorCardBg)
 	bgRect.CornerRadius = 12
-	bgRect.SetMinSize(fyne.NewSize(280, 330)) // Ini kunci agar tidak melebar
+	bgRect.SetMinSize(fyne.NewSize(280, 330)) 
 
-	// Tumpuk Background dan Layout
 	cardContent := container.NewStack(bgRect, container.NewPadded(finalLayout))
-
-	// Bungkus lagi dengan Center agar di tengah layar HP
 	centeredPopup := container.NewCenter(cardContent)
 
 	popup = widget.NewModalPopUp(centeredPopup, parentCanvas)
-	// Kita tidak resize popupnya, tapi resize konten di dalamnya secara paksa
-	// Namun untuk amannya kita resize popup juga
 	popup.Resize(fyne.NewSize(280, 330))
 	popup.Show()
 }
@@ -321,7 +309,6 @@ func main() {
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
 	myWindow.Resize(fyne.NewSize(400, 750))
 
-	// Header
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
 	headerTitle := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
 	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
@@ -338,14 +325,11 @@ func main() {
 	)
 	headerContainer := container.NewVBox(headerStack)
 
-	// --- Result Container ---
 	resultBox := container.NewVBox()
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
-	// Variable tanggal
 	calcDate := time.Now()
 
-	// UI Komponen Tanggal di Halaman Utama
 	lblDateTitle := canvas.NewText("Tanggal Wafat / Geblag:", ColorTextGrey)
 	lblDateTitle.TextSize = 12
 	
@@ -353,13 +337,11 @@ func main() {
 	lblSelectedDate.Alignment = fyne.TextAlignCenter
 	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
 
-	// Fungsi Helper untuk Update Label Tanggal
 	updateDateLabel := func(t time.Time) {
 		lblSelectedDate.SetText(formatIndoDate(t))
 	}
 	updateDateLabel(calcDate)
 
-	// --- Logic Calculation Function ---
 	performCalculation := func(t time.Time) {
 		updateDateLabel(t)
 		resultBox.Objects = nil
@@ -401,7 +383,6 @@ func main() {
 		resultBox.Refresh()
 	}
 
-	// Tombol Utama
 	btnOpenCalc := widget.NewButton("Pilih Tanggal & Hitung", nil)
 	btnOpenCalc.Importance = widget.HighImportance
 	btnOpenCalc.Icon = theme.CalendarIcon()
@@ -438,10 +419,14 @@ func main() {
 	lblNote := widget.NewLabel(noteText)
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
-	lblCredit := canvas.NewText("Code by Richo", ColorTextGrey)
-	lblCredit.Alignment = fyne.TextAlignCenter
-	lblCredit.TextSize = 10
-	footer := container.NewVBox(lblNote, lblCredit)
+	
+	// --- GANTI CREDIT DENGAN GAMBAR (rich.png) ---
+	imgCredit := canvas.NewImageFromFile("rich.png")
+	imgCredit.FillMode = canvas.ImageFillContain
+	imgCredit.SetMinSize(fyne.NewSize(80, 30)) // Ukuran proporsional logo
+
+	footer := container.NewVBox(lblNote, container.NewCenter(imgCredit))
+	
 	footerCardBg := canvas.NewRectangle(ColorCardBg)
 	footerCardBg.CornerRadius = 8
 	footerSection := container.NewStack(
