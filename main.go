@@ -92,93 +92,175 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 }
 
 // ==========================================
-// 3. LOGIKA KALENDER CUSTOM (GRID MANUAL)
+// 3. LOGIKA KALENDER CUSTOM (PROFESIONAL)
 // ==========================================
 
-// PERBAIKAN LOGIKA:
-// Menambahkan parameter 'onDateChanged' agar UI utama bisa update realtime saat tombol tanggal diklik.
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 
-	gridContainer := container.New(layout.NewGridLayout(7))
-	
-	lblHeader := widget.NewLabel("")
-	lblHeader.Alignment = fyne.TextAlignCenter
-	lblHeader.TextStyle = fyne.TextStyle{Bold: true}
+	// State untuk melacak apakah user sedang memilih Tanggal (mode biasa) atau memilih Bulan/Tahun
+	isYearSelectionMode := false
 
+	// Wadah utama yang isinya akan berganti-ganti
+	contentStack := container.NewStack()
+	
+	// Deklarasi Popup agar bisa ditutup nanti
 	var popup *widget.PopUp
 
-	var refreshGrid func()
-	refreshGrid = func() {
-		gridContainer.Objects = nil
-
-		daysHeader := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
-		for _, dayName := range daysHeader {
-			l := widget.NewLabel(dayName)
-			l.Alignment = fyne.TextAlignCenter
-			l.TextStyle = fyne.TextStyle{Bold: true}
-			gridContainer.Add(l)
-		}
-
+	// Fungsi untuk me-refresh seluruh isi popup
+	var refreshContent func()
+	refreshContent = func() {
+		// --- BUTTON HEADER (JUDUL BULAN TAHUN) ---
+		// Sekarang jadi tombol agar bisa diklik untuk ganti mode
 		year, month, _ := currentMonth.Date()
-		lblHeader.SetText(fmt.Sprintf("%s %d", BulanIndo[month], year))
-
-		firstDayOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
-		startWeekday := int(firstDayOfMonth.Weekday())
+		titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
 		
-		nextMonth := firstDayOfMonth.AddDate(0, 1, 0)
-		lastDay := nextMonth.Add(-time.Hour * 24).Day()
+		btnHeader := widget.NewButton(titleText, func() {
+			// Toggle mode saat judul diklik
+			isYearSelectionMode = !isYearSelectionMode
+			refreshContent()
+		})
+		// Style tombol header agar terlihat seperti judul tapi bisa diklik
+		btnHeader.Importance = widget.LowImportance 
+		btnHeader.Icon = theme.SearchIcon() // Ikon kecil indikator bisa dicari/ganti
+		btnHeader.IconPlacement = widget.ButtonIconTrailingText
 
-		for i := 0; i < startWeekday; i++ {
-			gridContainer.Add(layout.NewSpacer())
-		}
+		// --- NAVIGASI ATAS ---
+		var navContainer *fyne.Container
 
-		for d := 1; d <= lastDay; d++ {
-			dayNum := d
-			dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
-			
-			btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
-			
-			if dateVal.Year() == selectedDate.Year() && 
-			   dateVal.Month() == selectedDate.Month() && 
-			   dateVal.Day() == selectedDate.Day() {
-				btn.Importance = widget.HighImportance 
-			} else {
-				btn.Importance = widget.MediumImportance
+		if !isYearSelectionMode {
+			// [MODE 1] TAMPILAN TANGGAL BIASA
+			// Navigasi: < (Prev Month) | JUDUL | (Next Month) >
+			btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
+				currentMonth = currentMonth.AddDate(0, -1, 0)
+				refreshContent()
+			})
+			btnNext := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
+				currentMonth = currentMonth.AddDate(0, 1, 0)
+				refreshContent()
+			})
+			navContainer = container.NewBorder(nil, nil, btnPrev, btnNext, btnHeader)
+
+			// Grid Hari (Sen, Sel, Rab...)
+			gridContainer := container.New(layout.NewGridLayout(7))
+			daysHeader := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
+			for _, dayName := range daysHeader {
+				l := widget.NewLabel(dayName)
+				l.Alignment = fyne.TextAlignCenter
+				l.TextStyle = fyne.TextStyle{Bold: true}
+				gridContainer.Add(l)
 			}
 
-			// LOGIKA REALTIME DI SINI:
-			btn.OnTapped = func() {
-				selectedDate = dateVal
-				refreshGrid() // Refresh warna tombol di kalender
+			// Hitung kotak-kotak tanggal
+			firstDayOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
+			startWeekday := int(firstDayOfMonth.Weekday())
+			nextMonth := firstDayOfMonth.AddDate(0, 1, 0)
+			lastDay := nextMonth.Add(-time.Hour * 24).Day()
+
+			for i := 0; i < startWeekday; i++ {
+				gridContainer.Add(layout.NewSpacer())
+			}
+
+			for d := 1; d <= lastDay; d++ {
+				dayNum := d
+				dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
 				
-				// Panggil callback agar label di layar utama langsung berubah
-				if onDateChanged != nil {
-					onDateChanged(selectedDate)
+				btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
+				
+				if dateVal.Year() == selectedDate.Year() && 
+				   dateVal.Month() == selectedDate.Month() && 
+				   dateVal.Day() == selectedDate.Day() {
+					btn.Importance = widget.HighImportance 
+				} else {
+					btn.Importance = widget.MediumImportance
 				}
+
+				btn.OnTapped = func() {
+					selectedDate = dateVal
+					refreshContent()
+					if onDateChanged != nil {
+						onDateChanged(selectedDate)
+					}
+				}
+				gridContainer.Add(btn)
 			}
+
+			// Gabungkan Navigasi dan Grid
+			mainView := container.NewVBox(
+				container.NewPadded(navContainer),
+				container.NewPadded(gridContainer),
+			)
+			contentStack.Objects = []fyne.CanvasObject{mainView}
+
+		} else {
+			// [MODE 2] PILIH BULAN & TAHUN
+			// Tampilan untuk memilih tahun dan bulan dengan cepat
 			
-			gridContainer.Add(btn)
+			// Navigasi Tahun: < (Prev Year) | TAHUN | (Next Year) >
+			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
+			lblYear.TextStyle = fyne.TextStyle{Bold: true}
+			lblYear.Alignment = fyne.TextAlignCenter
+
+			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
+				currentMonth = currentMonth.AddDate(-1, 0, 0)
+				refreshContent()
+			})
+			btnNextYear := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
+				currentMonth = currentMonth.AddDate(1, 0, 0)
+				refreshContent()
+			})
+
+			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
+
+			// Grid Bulan (Jan, Feb, Mar...)
+			monthGrid := container.New(layout.NewGridLayout(3)) // 3 kolom
+			for i := 1; i <= 12; i++ {
+				mIdx := i
+				mName := BulanIndo[mIdx]
+				// Singkat nama bulan biar muat rapi
+				if len(mName) > 3 {
+					mName = mName[:3]
+				}
+
+				btnMonth := widget.NewButton(mName, func() {
+					// Set bulan baru, tanggal tetap 1 (agar aman)
+					currentMonth = time.Date(currentMonth.Year(), time.Month(mIdx), 1, 0, 0, 0, 0, time.Local)
+					// Kembali ke mode tanggal
+					isYearSelectionMode = false 
+					refreshContent()
+				})
+
+				// Highlight bulan yang sedang aktif
+				if time.Month(mIdx) == month {
+					btnMonth.Importance = widget.HighImportance
+				} else {
+					btnMonth.Importance = widget.MediumImportance
+				}
+				monthGrid.Add(btnMonth)
+			}
+
+			// Tombol "Kembali ke Tanggal" (header)
+			// Kita pakai navContainer yang sama tapi isinya beda
+			btnHeader.SetText("Kembali ke Tanggal")
+			btnHeader.Icon = theme.CancelIcon()
+			
+			selectionView := container.NewVBox(
+				container.NewPadded(btnHeader), // Tombol untuk batal milih tahun
+				container.NewPadded(yearNav),
+				container.NewPadded(monthGrid),
+			)
+			contentStack.Objects = []fyne.CanvasObject{selectionView}
 		}
+		
+		contentStack.Refresh()
 	}
 
-	btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-		currentMonth = currentMonth.AddDate(0, -1, 0)
-		refreshGrid()
-	})
-	btnNext := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
-		currentMonth = currentMonth.AddDate(0, 1, 0)
-		refreshGrid()
-	})
-
-	navContainer := container.NewBorder(nil, nil, btnPrev, btnNext, lblHeader)
-	
+	// --- TOMBOL ACTION BAWAH (Batal / Hitung) ---
 	btnHitung := widget.NewButton("Hitung", func() {
 		if popup != nil {
 			popup.Hide()
 		}
-		// Jalankan perhitungan akhir
 		onCalculate(selectedDate)
 	})
 	btnHitung.Importance = widget.HighImportance
@@ -193,22 +275,25 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 	buttonRow := container.NewGridWithColumns(2, btnBatal, btnHitung)
 
-	content := container.NewVBox(
-		navContainer,
-		container.NewPadded(gridContainer),
-		layout.NewSpacer(),
-		container.NewPadded(buttonRow),
+	// Layout Utama Popup
+	finalLayout := container.NewBorder(
+		nil, // Top
+		container.NewPadded(buttonRow), // Bottom
+		nil, nil, // Left Right
+		contentStack, // Center (Grid Kalender / Pemilih Bulan)
 	)
 
+	// Inisialisasi awal
+	refreshContent()
+
+	// Wrapper Card
 	cardWrapper := container.NewStack(
 		canvas.NewRectangle(ColorCardBg), 
-		container.NewPadded(content),
+		container.NewPadded(finalLayout),
 	)
 
-	refreshGrid()
-
 	popup = widget.NewModalPopUp(cardWrapper, parentCanvas)
-	popup.Resize(fyne.NewSize(350, 420))
+	popup.Resize(fyne.NewSize(350, 450)) // Sedikit dipertinggi
 	popup.Show()
 }
 
@@ -311,10 +396,7 @@ func main() {
 
 	// --- Logic Calculation Function ---
 	performCalculation := func(t time.Time) {
-		// Pastikan label terupdate (jaga-jaga)
 		updateDateLabel(t)
-
-		// Bersihkan hasil sebelumnya
 		resultBox.Objects = nil
 		
 		type Event struct {
@@ -365,7 +447,7 @@ func main() {
 			// Callback 1: Realtime update saat tanggal diklik
 			func(realtimeDate time.Time) {
 				calcDate = realtimeDate
-				updateDateLabel(calcDate) // <--- Ini yang mengubah tampilan 'Tanggal Wafat' seketika
+				updateDateLabel(calcDate) 
 			},
 			// Callback 2: Eksekusi hitungan saat tombol Hitung ditekan
 			func(finalDate time.Time) {
