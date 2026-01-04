@@ -1,7 +1,7 @@
 package main
 
 import (
-	_ "embed" // PENTING: Import ini wajib ada untuk embed
+	_ "embed"
 	"fmt"
 	"image/color"
 	"math"
@@ -24,7 +24,7 @@ import (
 var richPngData []byte
 
 //go:embed bg.png
-var bgPngData []byte // <--- TAMBAHAN BARU UNTUK BACKGROUND
+var bgPngData []byte
 
 // ==========================================
 // 2. LOGIKA MATEMATIKA & KALENDER JAWA
@@ -80,7 +80,6 @@ func formatIndoDate(t time.Time) string {
 // ==========================================
 
 var (
-	// ColorBgDark ini nanti akan digantikan oleh gambar, tapi tetap kita biarkan untuk komponen lain jika butuh
 	ColorBgDark     = color.NRGBA{R: 30, G: 33, B: 40, A: 255}
 	ColorCardBg     = color.NRGBA{R: 45, G: 48, B: 55, A: 255}
 	ColorHeaderTop  = color.NRGBA{R: 40, G: 180, B: 160, A: 255}
@@ -90,6 +89,7 @@ var (
 	ColorBadgeGreen = color.NRGBA{R: 46, G: 125, B: 50, A: 255}
 	ColorBadgeRed   = color.NRGBA{R: 198, G: 40, B: 40, A: 255}
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
+	ColorTextOrange = color.NRGBA{R: 255, G: 165, B: 0, A: 255} // Warna Orange Baru
 )
 
 type myTheme struct {
@@ -97,6 +97,11 @@ type myTheme struct {
 }
 
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	// Custom Hook: Jika ada request warna bernama "orange", return warna orange kita
+	if name == "orange" {
+		return ColorTextOrange
+	}
+	
 	if name == theme.ColorNamePrimary {
 		return ColorBadgeGreen
 	}
@@ -322,13 +327,8 @@ func main() {
 	myWindow.Resize(fyne.NewSize(400, 750))
 
 	// --- SETUP BACKGROUND IMAGE ---
-	// 1. Buat resource dari data embed
 	resBg := fyne.NewStaticResource("bg.png", bgPngData)
-	// 2. Buat canvas image dari resource
 	imgBg := canvas.NewImageFromResource(resBg)
-	// 3. Set agar gambar memenuhi layar (Cover atau Stretch)
-	// ImageFillCover: Memenuhi layar, proporsional, mungkin terpotong sedikit.
-	// ImageFillStretch: Memenuhi layar, tidak proporsional (gepeng jika rasio beda).
 	imgBg.FillMode = canvas.ImageFillCover 
 	// ------------------------------
 
@@ -438,18 +438,36 @@ func main() {
 	)
 
 	// --- Footer ---
-	noteText := "Notes: Perhitungan ini menggunakan rumus jawa (lusarlu hingga nemsarmo). Jikapun ada selisih 1 hari, tidak jadi masalahah karena perbedaan penentuan awal bulan Hijriah/Jawa."
-	lblNote := widget.NewLabel(noteText)
-	lblNote.Wrapping = fyne.TextWrapWord
-	lblNote.TextStyle = fyne.TextStyle{Italic: true}
+	// MODIFIKASI: Menggunakan RichText agar "Notes:" bisa berwarna Orange
+	// Isi notes tetap warna default (Abu/Putih sesuai tema)
+	richNote := widget.NewRichText(
+		&widget.TextSegment{
+			Text: "Notes: ",
+			Style: widget.RichTextStyle{
+				ColorName: "orange", // Request warna orange ke tema
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
+			},
+		},
+		&widget.TextSegment{
+			Text: "Perhitungan ini menggunakan rumus (3, 7, 40, 100, Pendhak 1 & 2, 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa.",
+			Style: widget.RichTextStyle{
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true},
+			},
+		},
+	)
+	// Agar teks notes membungkus (wrap) ke bawah jika panjang
+	richNote.Wrapping = fyne.TextWrapWord
+
 	
-	// --- CREDIT IMAGE (rich.png) ---
+	// --- CREDIT IMAGE ---
 	resRich := fyne.NewStaticResource("rich.png", richPngData)
 	imgCredit := canvas.NewImageFromResource(resRich)
 	imgCredit.FillMode = canvas.ImageFillContain
-	imgCredit.SetMinSize(fyne.NewSize(150, 50)) // Ukuran diperbesar
+	imgCredit.SetMinSize(fyne.NewSize(150, 50))
 
-	footer := container.NewVBox(lblNote, container.NewCenter(imgCredit))
+	footer := container.NewVBox(richNote, container.NewCenter(imgCredit))
 	
 	footerCardBg := canvas.NewRectangle(ColorCardBg)
 	footerCardBg.CornerRadius = 8
@@ -459,9 +477,6 @@ func main() {
 	)
 
 	// --- MENYUSUN LAYOUT UTAMA ---
-	// Hapus bgApp (kotak warna solid)
-	// bgApp := canvas.NewRectangle(ColorBgDark) 
-	
 	mainContent := container.NewBorder(
 		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
 		container.NewPadded(footerSection),
@@ -469,7 +484,6 @@ func main() {
 		scrollArea,
 	)
 
-	// Gunakan imgBg sebagai layer paling belakang di dalam Stack
 	myWindow.SetContent(container.NewStack(imgBg, mainContent))
 	myWindow.ShowAndRun()
 }
