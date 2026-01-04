@@ -85,8 +85,13 @@ type myTheme struct {
 }
 
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	// Primary -> Hijau (Tombol Hitung)
 	if name == theme.ColorNamePrimary {
 		return ColorBadgeGreen
+	}
+	// Error -> Merah (Tombol Back/Batal)
+	if name == theme.ColorNameError {
+		return ColorBadgeRed
 	}
 	return m.Theme.Color(name, variant)
 }
@@ -116,8 +121,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			refreshContent()
 		})
 		btnHeader.Importance = widget.LowImportance 
-		btnHeader.Icon = theme.SearchIcon()
-		btnHeader.IconPlacement = widget.ButtonIconTrailingText
+		// Hapus icon search agar lebih bersih
 
 		var navContainer *fyne.Container
 
@@ -131,8 +135,11 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				currentMonth = currentMonth.AddDate(0, 1, 0)
 				refreshContent()
 			})
-			// Navigasi dengan Judul di tengah
-			navContainer = container.NewBorder(nil, nil, btnPrev, btnNext, btnHeader)
+			
+			// MODIFIKASI PENTING:
+			// Bungkus btnHeader dengan container.NewCenter()
+			// Ini membuat tombol judul HANYA SELEBAR TEKS-NYA saja, tidak melebar ke samping.
+			navContainer = container.NewBorder(nil, nil, btnPrev, btnNext, container.NewCenter(btnHeader))
 
 			gridContainer := container.New(layout.NewGridLayout(7))
 			daysHeader := []string{"Min", "Sen", "Sel", "Rab", "Kam", "Jum", "Sab"}
@@ -185,12 +192,13 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		} else {
 			// [MODE 2] PILIH BULAN & TAHUN
 			
-			// 1. Tombol Back (Ganti Text "Kembali" dengan Icon Back Saja)
-			btnHeader.SetText("") 
-			btnHeader.Icon = theme.NavigateBackIcon()
-			btnHeader.IconPlacement = widget.ButtonIconLeadingText
+			// Tombol Back MERAH (Compact)
+			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
+				isYearSelectionMode = false
+				refreshContent()
+			})
+			btnBack.Importance = widget.DangerImportance 
 			
-			// Navigasi Tahun
 			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
 			lblYear.TextStyle = fyne.TextStyle{Bold: true}
 			lblYear.Alignment = fyne.TextAlignCenter
@@ -206,7 +214,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
 
-			// Grid Bulan (Dengan tombol ramping)
 			monthGrid := container.New(layout.NewGridLayout(3))
 			for i := 1; i <= 12; i++ {
 				mIdx := i
@@ -227,13 +234,12 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					btnMonth.Importance = widget.MediumImportance
 				}
 				
-				// MODIFIKASI: Bungkus dengan Center agar tombol tidak melebar, mengikuti ukuran teks
+				// Tombol bulan dipadatkan
 				monthGrid.Add(container.NewCenter(btnMonth))
 			}
 			
-			// Layout Mode 2
-			// Back Button ditaruh di dalam container Center agar kecil
-			topRow := container.NewHBox(btnHeader, layout.NewSpacer()) // Back di kiri
+			// Tombol Back ditaruh di Center container agar kecil
+			topRow := container.NewHBox(container.NewCenter(btnBack), layout.NewSpacer())
 			
 			selectionView := container.NewVBox(
 				container.NewPadded(topRow),
@@ -266,7 +272,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		contentStack, // Center
 	)
 
-	// Inisialisasi awal
 	refreshContent()
 
 	cardWrapper := container.NewStack(
@@ -275,7 +280,8 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	)
 
 	popup = widget.NewModalPopUp(cardWrapper, parentCanvas)
-	popup.Resize(fyne.NewSize(350, 450))
+	// Ukuran popup dibuat kompak
+	popup.Resize(fyne.NewSize(300, 380)) 
 	popup.Show()
 }
 
