@@ -95,9 +95,9 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 // 3. LOGIKA KALENDER CUSTOM (GRID MANUAL)
 // ==========================================
 
-// PERBAIKAN: Parameter diubah dari 'canvas' menjadi 'parentCanvas'
-// untuk menghindari bentrok dengan nama paket 'canvas'.
-func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onCalculate func(time.Time)) {
+// PERBAIKAN LOGIKA:
+// Menambahkan parameter 'onDateChanged' agar UI utama bisa update realtime saat tombol tanggal diklik.
+func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 
@@ -148,9 +148,15 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onCalc
 				btn.Importance = widget.MediumImportance
 			}
 
+			// LOGIKA REALTIME DI SINI:
 			btn.OnTapped = func() {
 				selectedDate = dateVal
-				refreshGrid()
+				refreshGrid() // Refresh warna tombol di kalender
+				
+				// Panggil callback agar label di layar utama langsung berubah
+				if onDateChanged != nil {
+					onDateChanged(selectedDate)
+				}
 			}
 			
 			gridContainer.Add(btn)
@@ -172,6 +178,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onCalc
 		if popup != nil {
 			popup.Hide()
 		}
+		// Jalankan perhitungan akhir
 		onCalculate(selectedDate)
 	})
 	btnHitung.Importance = widget.HighImportance
@@ -193,7 +200,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onCalc
 		container.NewPadded(buttonRow),
 	)
 
-	// Sekarang 'canvas.NewRectangle' aman dipanggil karena parameter fungsi namanya 'parentCanvas'
 	cardWrapper := container.NewStack(
 		canvas.NewRectangle(ColorCardBg), 
 		container.NewPadded(content),
@@ -201,7 +207,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onCalc
 
 	refreshGrid()
 
-	// Gunakan parentCanvas disini
 	popup = widget.NewModalPopUp(cardWrapper, parentCanvas)
 	popup.Resize(fyne.NewSize(350, 420))
 	popup.Show()
@@ -306,7 +311,7 @@ func main() {
 
 	// --- Logic Calculation Function ---
 	performCalculation := func(t time.Time) {
-		// Update label di layar utama agar sesuai dengan tanggal yg dipilih
+		// Pastikan label terupdate (jaga-jaga)
 		updateDateLabel(t)
 
 		// Bersihkan hasil sebelumnya
@@ -356,10 +361,18 @@ func main() {
 	btnOpenCalc.Icon = theme.CalendarIcon()
 
 	btnOpenCalc.OnTapped = func() {
-		createCalendarPopup(myWindow.Canvas(), calcDate, func(selected time.Time) {
-			calcDate = selected
-			performCalculation(calcDate)
-		})
+		createCalendarPopup(myWindow.Canvas(), calcDate, 
+			// Callback 1: Realtime update saat tanggal diklik
+			func(realtimeDate time.Time) {
+				calcDate = realtimeDate
+				updateDateLabel(calcDate) // <--- Ini yang mengubah tampilan 'Tanggal Wafat' seketika
+			},
+			// Callback 2: Eksekusi hitungan saat tombol Hitung ditekan
+			func(finalDate time.Time) {
+				calcDate = finalDate
+				performCalculation(calcDate)
+			},
+		)
 	}
 
 	inputRow := container.NewBorder(nil, nil, nil, nil, lblSelectedDate)
