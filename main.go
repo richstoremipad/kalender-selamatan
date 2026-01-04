@@ -1,7 +1,7 @@
 package main
 
 import (
-	_"embed"
+	_ "embed"
 	"fmt"
 	"image/color"
 	"math"
@@ -428,13 +428,13 @@ func main() {
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
 	
-	// --- GANTI CREDIT DENGAN EMBEDDED RESOURCE ---
-	// Mengubah []byte menjadi StaticResource agar bisa dibaca Fyne
+	// --- GANTI CREDIT DENGAN EMBEDDED RESOURCE YANG DIPERBESAR ---
 	resRich := fyne.NewStaticResource("rich.png", richPngData)
 	imgCredit := canvas.NewImageFromResource(resRich)
 	
 	imgCredit.FillMode = canvas.ImageFillContain
-	imgCredit.SetMinSize(fyne.NewSize(80, 30))
+	// Perbesar ukuran di sini (misal: 150x50)
+	imgCredit.SetMinSize(fyne.NewSize(150, 50))
 
 	footer := container.NewVBox(lblNote, container.NewCenter(imgCredit))
 	
