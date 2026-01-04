@@ -92,7 +92,7 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 }
 
 // ==========================================
-// 3. LOGIKA KALENDER CUSTOM (PROFESIONAL)
+// 3. LOGIKA KALENDER CUSTOM (PROFESIONAL & RAMPING)
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
@@ -110,6 +110,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		year, month, _ := currentMonth.Date()
 		titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
 		
+		// Button Header (Judul Bulan/Tahun)
 		btnHeader := widget.NewButton(titleText, func() {
 			isYearSelectionMode = !isYearSelectionMode
 			refreshContent()
@@ -130,6 +131,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				currentMonth = currentMonth.AddDate(0, 1, 0)
 				refreshContent()
 			})
+			// Navigasi dengan Judul di tengah
 			navContainer = container.NewBorder(nil, nil, btnPrev, btnNext, btnHeader)
 
 			gridContainer := container.New(layout.NewGridLayout(7))
@@ -182,6 +184,13 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 		} else {
 			// [MODE 2] PILIH BULAN & TAHUN
+			
+			// 1. Tombol Back (Ganti Text "Kembali" dengan Icon Back Saja)
+			btnHeader.SetText("") 
+			btnHeader.Icon = theme.NavigateBackIcon()
+			btnHeader.IconPlacement = widget.ButtonIconLeadingText
+			
+			// Navigasi Tahun
 			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
 			lblYear.TextStyle = fyne.TextStyle{Bold: true}
 			lblYear.Alignment = fyne.TextAlignCenter
@@ -197,6 +206,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
 
+			// Grid Bulan (Dengan tombol ramping)
 			monthGrid := container.New(layout.NewGridLayout(3))
 			for i := 1; i <= 12; i++ {
 				mIdx := i
@@ -216,14 +226,17 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				} else {
 					btnMonth.Importance = widget.MediumImportance
 				}
-				monthGrid.Add(btnMonth)
+				
+				// MODIFIKASI: Bungkus dengan Center agar tombol tidak melebar, mengikuti ukuran teks
+				monthGrid.Add(container.NewCenter(btnMonth))
 			}
-
-			btnHeader.SetText("Kembali ke Tanggal")
-			btnHeader.Icon = theme.CancelIcon()
+			
+			// Layout Mode 2
+			// Back Button ditaruh di dalam container Center agar kecil
+			topRow := container.NewHBox(btnHeader, layout.NewSpacer()) // Back di kiri
 			
 			selectionView := container.NewVBox(
-				container.NewPadded(btnHeader),
+				container.NewPadded(topRow),
 				container.NewPadded(yearNav),
 				container.NewPadded(monthGrid),
 			)
@@ -233,7 +246,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		contentStack.Refresh()
 	}
 
-	// --- TOMBOL ACTION BAWAH (Hanya Hitung) ---
+	// --- TOMBOL ACTION BAWAH (Hanya Hitung - Ramping) ---
 	btnHitung := widget.NewButton("Hitung", func() {
 		if popup != nil {
 			popup.Hide()
@@ -243,13 +256,12 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	btnHitung.Importance = widget.HighImportance
 	btnHitung.Icon = theme.ConfirmIcon()
 
-	// MODIFIKASI: Tombol Hitung dibungkus container.NewCenter agar tidak melebar
 	bottomContainer := container.NewPadded(container.NewCenter(btnHitung))
 
 	// Layout Utama Popup
 	finalLayout := container.NewBorder(
 		nil, // Top
-		bottomContainer, // Bottom (Tombol Hitung Ramping)
+		bottomContainer, // Bottom 
 		nil, nil, // Left Right
 		contentStack, // Center
 	)
@@ -431,14 +443,13 @@ func main() {
 	inputCardBg := canvas.NewRectangle(ColorCardBg)
 	inputCardBg.CornerRadius = 8
 	
-	// MODIFIKASI: Membungkus tombol utama dengan container.NewCenter agar tidak melebar
 	inputSection := container.NewStack(
 		inputCardBg,
 		container.NewPadded(container.NewVBox(
 			lblDateTitle, 
 			inputRow, 
 			layout.NewSpacer(), 
-			container.NewCenter(btnOpenCalc), // <--- Tombol jadi ramping (centered)
+			container.NewCenter(btnOpenCalc),
 		)),
 	)
 
