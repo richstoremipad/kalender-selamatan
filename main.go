@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"image/color"
 	"math"
@@ -16,7 +17,14 @@ import (
 )
 
 // ==========================================
-// 1. LOGIKA MATEMATIKA & KALENDER JAWA
+// 1. EMBED RESOURCE (GAMBAR)
+// ==========================================
+
+//go:embed rich.png
+var richPngData []byte
+
+// ==========================================
+// 2. LOGIKA MATEMATIKA & KALENDER JAWA
 // ==========================================
 
 var (
@@ -65,7 +73,7 @@ func formatIndoDate(t time.Time) string {
 }
 
 // ==========================================
-// 2. KOMPONEN UI CUSTOM & COLORS
+// 3. KOMPONEN UI CUSTOM & COLORS
 // ==========================================
 
 var (
@@ -98,7 +106,7 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 }
 
 // ==========================================
-// 3. LOGIKA KALENDER CUSTOM (ULTRA COMPACT)
+// 4. LOGIKA KALENDER CUSTOM (ULTRA COMPACT)
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
@@ -253,7 +261,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 
 // ==========================================
-// 4. HELPER UI CARDS
+// 5. HELPER UI CARDS
 // ==========================================
 
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
@@ -299,7 +307,7 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 }
 
 // ==========================================
-// 5. MAIN APP
+// 6. MAIN APP
 // ==========================================
 
 func main() {
@@ -420,10 +428,13 @@ func main() {
 	lblNote.Wrapping = fyne.TextWrapWord
 	lblNote.TextStyle = fyne.TextStyle{Italic: true}
 	
-	// --- GANTI CREDIT DENGAN GAMBAR (rich.png) ---
-	imgCredit := canvas.NewImageFromFile("rich.png")
+	// --- GANTI CREDIT DENGAN EMBEDDED RESOURCE ---
+	// Mengubah []byte menjadi StaticResource agar bisa dibaca Fyne
+	resRich := fyne.NewStaticResource("rich.png", richPngData)
+	imgCredit := canvas.NewImageFromResource(resRich)
+	
 	imgCredit.FillMode = canvas.ImageFillContain
-	imgCredit.SetMinSize(fyne.NewSize(80, 30)) // Ukuran proporsional logo
+	imgCredit.SetMinSize(fyne.NewSize(80, 30))
 
 	footer := container.NewVBox(lblNote, container.NewCenter(imgCredit))
 	
