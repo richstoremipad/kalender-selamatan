@@ -10,7 +10,6 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
@@ -96,9 +95,9 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 // 3. LOGIKA KALENDER CUSTOM (GRID MANUAL)
 // ==========================================
 
-// createCalendarPopup sekarang menerima callback 'onCalculate'
-// yang akan dijalankan ketika tombol "Hitung" (di dialog) ditekan.
-func createCalendarPopup(parent fyne.Window, initialDate time.Time, onCalculate func(time.Time)) {
+// createCalendarPopup sekarang menggunakan ModalPopUp agar kita bisa
+// membuat tombol "Hitung" custom yang berwarna (HighImportance).
+func createCalendarPopup(canvas fyne.Canvas, initialDate time.Time, onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 
@@ -108,7 +107,7 @@ func createCalendarPopup(parent fyne.Window, initialDate time.Time, onCalculate 
 	lblHeader.Alignment = fyne.TextAlignCenter
 	lblHeader.TextStyle = fyne.TextStyle{Bold: true}
 
-	var modal *dialog.CustomDialog
+	var popup *widget.PopUp
 
 	var refreshGrid func()
 	refreshGrid = func() {
@@ -149,8 +148,7 @@ func createCalendarPopup(parent fyne.Window, initialDate time.Time, onCalculate 
 				btn.Importance = widget.MediumImportance
 			}
 
-			// Saat tanggal diklik, kita hanya update variabel selectedDate dan refresh warna
-			// User harus klik "Hitung" di bawah untuk memproses
+			// Saat tanggal diklik, update state dan refresh tampilan
 			btn.OnTapped = func() {
 				selectedDate = dateVal
 				refreshGrid()
@@ -171,23 +169,45 @@ func createCalendarPopup(parent fyne.Window, initialDate time.Time, onCalculate 
 
 	navContainer := container.NewBorder(nil, nil, btnPrev, btnNext, lblHeader)
 	
+	// Tombol HITUNG BERWARNA (HighImportance)
+	btnHitung := widget.NewButton("Hitung", func() {
+		if popup != nil {
+			popup.Hide()
+		}
+		onCalculate(selectedDate)
+	})
+	btnHitung.Importance = widget.HighImportance
+	btnHitung.Icon = theme.ConfirmIcon()
+
+	// Tombol Batal (Opsional, agar user bisa keluar tanpa menghitung)
+	btnBatal := widget.NewButton("Batal", func() {
+		if popup != nil {
+			popup.Hide()
+		}
+	})
+	btnBatal.Importance = widget.LowImportance
+
+	buttonRow := container.NewGridWithColumns(2, btnBatal, btnHitung)
+
 	content := container.NewVBox(
 		navContainer,
 		container.NewPadded(gridContainer),
+		layout.NewSpacer(),
+		container.NewPadded(buttonRow),
+	)
+
+	// Bungkus content dalam Card agar background terlihat bagus di atas modal
+	cardWrapper := container.NewStack(
+		canvas.NewRectangle(ColorCardBg), // Background popup
+		container.NewPadded(content),
 	)
 
 	refreshGrid()
 
-	// MODIFIKASI: Tombol dismiss diganti jadi "Hitung"
-	modal = dialog.NewCustom("Pilih Tanggal Geblag", "Hitung", content, parent)
-	modal.Resize(fyne.NewSize(350, 400))
-	
-	// MODIFIKASI: Saat dialog ditutup (tombol Hitung ditekan), jalankan callback
-	modal.SetOnClosed(func() {
-		onCalculate(selectedDate)
-	})
-
-	modal.Show()
+	// Menggunakan NewModalPopUp untuk fleksibilitas penuh
+	popup = widget.NewModalPopUp(cardWrapper, canvas)
+	popup.Resize(fyne.NewSize(350, 420))
+	popup.Show()
 }
 
 
@@ -265,15 +285,33 @@ func main() {
 	)
 	headerContainer := container.NewVBox(headerStack)
 
-	// --- Result Container (Disiapkan dulu agar bisa diakses button) ---
+	// --- Result Container ---
 	resultBox := container.NewVBox()
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
-	// Variable untuk menyimpan tanggal perhitungan (default hari ini)
+	// Variable tanggal
 	calcDate := time.Now()
+
+	// UI Komponen Tanggal di Halaman Utama
+	lblDateTitle := canvas.NewText("Tanggal Wafat / Geblag:", ColorTextGrey)
+	lblDateTitle.TextSize = 12
+	
+	lblSelectedDate := widget.NewLabel("")
+	lblSelectedDate.Alignment = fyne.TextAlignCenter
+	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
+
+	// Fungsi Helper untuk Update Label Tanggal
+	updateDateLabel := func(t time.Time) {
+		lblSelectedDate.SetText(formatIndoDate(t))
+	}
+	// Inisialisasi label dengan tanggal hari ini
+	updateDateLabel(calcDate)
 
 	// --- Logic Calculation Function ---
 	performCalculation := func(t time.Time) {
+		// Update label di layar utama agar sesuai dengan tanggal yg dipilih
+		updateDateLabel(t)
+
 		// Bersihkan hasil sebelumnya
 		resultBox.Objects = nil
 		
@@ -315,44 +353,30 @@ func main() {
 		resultBox.Refresh()
 	}
 
-	// --- Input Section UI ---
-	inputLabel := canvas.NewText("Tanggal Hari Ini:", ColorTextGrey)
-	inputLabel.TextSize = 12
-
-	// MODIFIKASI: Mengganti tombol date picker lama dengan label statis "Hari Ini"
-	todayStr := fmt.Sprintf("%s", formatIndoDate(time.Now()))
-	lblToday := widget.NewLabel(todayStr)
-	lblToday.Alignment = fyne.TextAlignCenter
-	lblToday.TextStyle = fyne.TextStyle{Bold: true}
-	
-	// Tombol Utama untuk Membuka Popup dan Hitung
-	btnOpenCalc := widget.NewButton("Hitung Selamatan", nil)
+	// Tombol Utama
+	btnOpenCalc := widget.NewButton("Pilih Tanggal & Hitung", nil)
 	btnOpenCalc.Importance = widget.HighImportance
 	btnOpenCalc.Icon = theme.CalendarIcon()
 
-	// MODIFIKASI LOGIKA TOMBOL HITUNG:
-	// 1. Klik tombol ini -> Buka Popup
-	// 2. Pilih tanggal di Popup
-	// 3. Klik "Hitung" di Popup -> Jalankan performCalculation
 	btnOpenCalc.OnTapped = func() {
-		createCalendarPopup(myWindow, calcDate, func(selected time.Time) {
-			// Callback ini jalan setelah tombol "Hitung" di popup ditekan
+		// Gunakan canvas window sebagai parent popup
+		createCalendarPopup(myWindow.Canvas(), calcDate, func(selected time.Time) {
 			calcDate = selected
 			performCalculation(calcDate)
 		})
 	}
 
-	inputRow := container.NewBorder(nil, nil, nil, nil, lblToday)
+	inputRow := container.NewBorder(nil, nil, nil, nil, lblSelectedDate)
 	inputCardBg := canvas.NewRectangle(ColorCardBg)
 	inputCardBg.CornerRadius = 8
 	
 	inputSection := container.NewStack(
 		inputCardBg,
 		container.NewPadded(container.NewVBox(
-			inputLabel, 
+			lblDateTitle, 
 			inputRow, 
 			layout.NewSpacer(), 
-			btnOpenCalc, // Tombol hitung sekarang disini
+			btnOpenCalc,
 		)),
 	)
 
