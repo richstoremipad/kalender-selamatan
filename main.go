@@ -434,7 +434,7 @@ func main() {
 	
 	imgCredit.FillMode = canvas.ImageFillContain
 	// Perbesar ukuran di sini (misal: 150x50)
-	imgCredit.SetMinSize(fyne.NewSize(150, 50))
+	imgCredit.SetMinSize(fyne.NewSize(300, 80))
 
 	footer := container.NewVBox(lblNote, container.NewCenter(imgCredit))
 	
