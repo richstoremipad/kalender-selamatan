@@ -455,7 +455,7 @@ func main() {
 		},
 		// 2. Teks Awal (Default)
 		&widget.TextSegment{
-			Text: "Perhitungan ini menggunakan rumus (3, 7, 40, 100, ",
+			Text: "Perhitungan ini menggunakan rumus ",
 			Style: widget.RichTextStyle{
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true},
@@ -463,7 +463,24 @@ func main() {
 		},
 		// 3. Teks Khusus (MERAH)
 		&widget.TextSegment{
-			Text: "Pendhak 1 & 2",
+			Text: "lusarlu",
+			Style: widget.RichTextStyle{
+				ColorName: "red", // Request warna merah ke tema
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
+			},
+		},
+
+		&widget.TextSegment{
+			Text: "hingga ",
+			Style: widget.RichTextStyle{
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true},
+			},
+		},
+
+		&widget.TextSegment{
+			Text: "nemsarmo ",
 			Style: widget.RichTextStyle{
 				ColorName: "red", // Request warna merah ke tema
 				Inline:    true,
@@ -472,7 +489,7 @@ func main() {
 		},
 		// 4. Teks Akhir (Default)
 		&widget.TextSegment{
-			Text: ", 1000). Jika ada selisih 1 hari, itu wajar karena perbedaan penentuan awal bulan Hijriah/Jawa.",
+			Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.",
 			Style: widget.RichTextStyle{
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true},
