@@ -122,10 +122,37 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 // 4. LOGIKA KALENDER CUSTOM (ULTRA COMPACT)
 // ==========================================
 
+// Helper untuk menampilkan pesan singkat (Toast)
+func showToast(parent fyne.Canvas, message string) {
+	lbl := widget.NewLabel(message)
+	lbl.Alignment = fyne.TextAlignCenter
+	lbl.TextStyle = fyne.TextStyle{Bold: true}
+
+	// Background hitam transparan untuk toast
+	bg := canvas.NewRectangle(color.NRGBA{R: 0, G: 0, B: 0, A: 220})
+	bg.CornerRadius = 8
+
+	// Container isi toast
+	content := container.NewStack(bg, container.NewPadded(lbl))
+	
+	// Gunakan ModalPopUp
+	toast := widget.NewModalPopUp(content, parent)
+	toast.Show()
+
+	// Timer untuk menutup toast otomatis setelah 1.5 detik
+	go func() {
+		time.Sleep(1500 * time.Millisecond)
+		toast.Hide()
+	}()
+}
+
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 	isYearSelectionMode := false
+
+	// STATE BARU: Melacak apakah user sudah klik tanggal
+	isDatePicked := false 
 
 	contentStack := container.NewStack()
 	var popup *widget.PopUp
@@ -176,6 +203,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				dayNum := d
 				dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
 				btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
+				
 				if dateVal.Year() == selectedDate.Year() && 
 				   dateVal.Month() == selectedDate.Month() && 
 				   dateVal.Day() == selectedDate.Day() {
@@ -183,8 +211,10 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				} else {
 					btn.Importance = widget.MediumImportance
 				}
+
 				btn.OnTapped = func() {
 					selectedDate = dateVal
+					isDatePicked = true // Tandai user sudah memilih tanggal
 					refreshContent()
 					if onDateChanged != nil { onDateChanged(selectedDate) }
 				}
@@ -244,6 +274,14 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	}
 
 	btnHitung := widget.NewButton("Hitung", func() {
+		// --- VALIDASI: Apakah tanggal sudah dipilih? ---
+		if !isDatePicked {
+			showToast(parentCanvas, "⚠ Pilih tanggal dulu!")
+			// Return agar popup tidak tertutup
+			return 
+		}
+
+		// Jika valid, tutup popup dan hitung
 		if popup != nil { popup.Hide() }
 		onCalculate(selectedDate)
 	})
@@ -417,10 +455,12 @@ func main() {
 	btnOpenCalc.OnTapped = func() {
 		createCalendarPopup(myWindow.Canvas(), calcDate, 
 			func(realtimeDate time.Time) {
+				// Ini callback saat user klik tanggal (tapi belum hitung)
 				calcDate = realtimeDate
 				updateDateLabel(calcDate) 
 			},
 			func(finalDate time.Time) {
+				// Ini callback saat tombol HITUNG ditekan
 				calcDate = finalDate
 				performCalculation(calcDate)
 			},
@@ -442,7 +482,7 @@ func main() {
 	)
 
 	// --- Footer ---
-	// MODIFIKASI: RichText dengan 3 Segmen Warna (Orange, Default, Red)
+	// RichText dengan 3 Segmen Warna
 	richNote := widget.NewRichText(
 		// 1. Judul (Orange)
 		&widget.TextSegment{
@@ -465,7 +505,7 @@ func main() {
 		&widget.TextSegment{
 			Text: "lusarlu ",
 			Style: widget.RichTextStyle{
-				ColorName: "red", // Request warna merah ke tema
+				ColorName: "red", 
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
@@ -482,7 +522,7 @@ func main() {
 		&widget.TextSegment{
 			Text: "nemsarmo ",
 			Style: widget.RichTextStyle{
-				ColorName: "red", // Request warna merah ke tema
+				ColorName: "red", 
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
