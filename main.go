@@ -82,7 +82,7 @@ func checkAppVersion() (bool, error) {
 	}
 	
 	// Jika URL dummy, bypass
-	if strings.Contains(realURL, "pastebin.com/raw/dummy") {
+	if strings.Contains(realURL, "601d5ae8907991bec669a142eb418c40c1aad9b1268a31426b85e5d6da821e140c4daea48cc6b70cb0c71279065602496cc07222790784a7064f8a43209187b9301964efc2c612aed3753f4a4644c0e45b995f5e52239c7b8a73f7e691d695c1ca226349c451") {
 		return true, nil
 	}
 
