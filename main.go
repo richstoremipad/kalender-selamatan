@@ -40,12 +40,12 @@ var bgPngData []byte
 const (
 	AppVersion = "1.0.0" // Versi aplikasi ini
 
-	// KUNCI RAHASIA (32 Bytes) - SAMA dengan Generator
+	// KUNCI RAHASIA (32 Bytes)
 	AesKey = "12345678901234567890123456789012"
 
-	// URL TERENKRIPSI (Hasil Generator Run ke-2)
-	// GANTI string panjang ini dengan hasil generator Anda sendiri!
-	// Default ini adalah dummy link
+	// URL TERENKRIPSI
+	// Ganti string hex ini dengan hasil generator Anda.
+	// Default ini adalah dummy yang akan dilewati oleh logic check.
 	EncryptedUrlHex = "c6b8c8352528753239a58934df146c9c6148684703a55b341d726615b3c5861786576628ec23c4"
 )
 
@@ -81,6 +81,7 @@ func checkAppVersion() (bool, error) {
 		return true, nil // Fail open
 	}
 	
+	// Jika URL dummy, bypass
 	if strings.Contains(realURL, "pastebin.com/raw/dummy") {
 		return true, nil
 	}
@@ -99,7 +100,7 @@ func checkAppVersion() (bool, error) {
 
 	serverVersion, err := decryptAES(encryptedBody)
 	if err != nil {
-		return false, nil // Block akses jika gagal decrypt
+		return false, nil // Gagal decrypt = data tidak valid/dimanipulasi
 	}
 
 	// TAHAP D: Bandingkan
@@ -363,24 +364,20 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 		showToast(parentCanvas, "Memeriksa Validitas...")
 		
+		// Proses di background
 		go func() {
 			isValid, _ := checkAppVersion()
 			
-			// GUNAKAN QueueMain AGAR THREAD SAFE DAN MENGHINDARI ERROR DRIVER
-			fyne.CurrentApp().Driver().Run() // Memastikan driver aktif (optional safeguard)
-			
+			// Jika valid, lanjutkan proses
 			if isValid {
-				// Jalankan logika UI update di Main Thread
-				fyne.CurrentApp().QueueMain(func() {
-					contentStack.Refresh() // << FIX: Simply refresh the object
-					if popup != nil { popup.Hide() }
-					onCalculate(selectedDate)
-				})
+				// Refresh UI secara langsung (Fyne handle refresh dengan aman untuk properti sederhana)
+				contentStack.Refresh() 
+				if popup != nil { popup.Hide() }
+				onCalculate(selectedDate)
 			} else {
-				fyne.CurrentApp().QueueMain(func() {
-					showUpdateBlocker(parentCanvas)
-					if popup != nil { popup.Hide() } 
-				})
+				// Tampilkan blocker jika tidak valid
+				showUpdateBlocker(parentCanvas)
+				if popup != nil { popup.Hide() } 
 			}
 		}()
 	})
@@ -485,10 +482,10 @@ func main() {
 	updateDateLabel(calcDate)
 
 	performCalculation := func(t time.Time) {
-		// << FIX: Simply refresh resultBox, no driver call needed
-		resultBox.Refresh() 
+		// Gunakan RemoveAll untuk membersihkan container dengan aman
+		resultBox.RemoveAll()
+		
 		updateDateLabel(t)
-		resultBox.Objects = nil
 		
 		type Event struct {
 			Name   string
@@ -524,6 +521,7 @@ func main() {
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
 		}
+		// Refresh container agar perubahan terlihat
 		resultBox.Refresh()
 	}
 
