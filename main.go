@@ -44,16 +44,15 @@ const (
 	AesKey = "12345678901234567890123456789012"
 
 	// URL TERENKRIPSI (Hasil Generator Run ke-2)
-	// Contoh di bawah adalah hasil enkripsi dari "https://pastebin.com/raw/dummy"
 	// GANTI string panjang ini dengan hasil generator Anda sendiri!
+	// Default ini adalah dummy link
 	EncryptedUrlHex = "c6b8c8352528753239a58934df146c9c6148684703a55b341d726615b3c5861786576628ec23c4"
 )
 
-// Fungsi Dekripsi AES Universal (Bisa untuk URL, bisa untuk Body)
+// Fungsi Dekripsi AES Universal
 func decryptAES(encryptedHex string) (string, error) {
 	key := []byte(AesKey)
 	
-	// Bersihkan whitespace jika ada
 	cleanHex := strings.TrimSpace(encryptedHex)
 	
 	data, err := hex.DecodeString(cleanHex)
@@ -76,53 +75,46 @@ func decryptAES(encryptedHex string) (string, error) {
 }
 
 func checkAppVersion() (bool, error) {
-	// TAHAP A: Dekripsi URL dulu (Anti Static Analysis)
+	// TAHAP A: Dekripsi URL
 	realURL, err := decryptAES(EncryptedUrlHex)
 	if err != nil {
-		// URL di kode rusak/diubah -> Anggap gagal update, tapi boleh jalan (fail open) 
-		// atau block (fail close). Di sini kita fail open agar tidak crash.
-		return true, nil 
+		return true, nil // Fail open
 	}
 	
-	// Jika URL masih dummy (default generator saya), bypass.
-	if strings.Contains(realURL, "601d5ae8907991bec669a142eb418c40c1aad9b1268a31426b85e5d6da821e140c4daea48cc6b70cb0c71279065602496cc07222790784a7064f8a43209187b9301964efc2c612aed3753f4a4644c0e45b995f5e52239c7b8a73f7e691d695c1ca226349c451") {
+	if strings.Contains(realURL, "pastebin.com/raw/dummy") {
 		return true, nil
 	}
 
-	// TAHAP B: Request ke Server
+	// TAHAP B: Request
 	client := http.Client{Timeout: 4 * time.Second}
 	resp, err := client.Get(realURL)
-	if err != nil { return true, nil } // Offline -> OK
+	if err != nil { return true, nil } 
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 { return true, nil }
 
-	// TAHAP C: Baca Body & Dekripsi Isi (Anti Sniffing/Mocking)
+	// TAHAP C: Baca Body & Dekripsi
 	bodyBytes, _ := io.ReadAll(resp.Body)
 	encryptedBody := string(bodyBytes)
 
 	serverVersion, err := decryptAES(encryptedBody)
 	if err != nil {
-		// GAGAL DEKRIPSI BODY
-		// Artinya: Hacker mencoba "Mock Response" di HTTP Canary tapi dia tidak tahu Key AES kita.
-		// Tindakan: BLOCK AKSES.
-		return false, nil 
+		return false, nil // Block akses jika gagal decrypt
 	}
 
-	// TAHAP D: Bandingkan Versi
-	// Menggunakan Hash untuk mempersulit memory scanning
+	// TAHAP D: Bandingkan
 	localHash := sha256.Sum256([]byte(AppVersion))
 	serverHash := sha256.Sum256([]byte(serverVersion))
 
 	if localHash == serverHash {
-		return true, nil // Cocok
+		return true, nil 
 	}
 
-	return false, nil // Versi Server Beda -> Minta Update
+	return false, nil 
 }
 
 // ==========================================
-// 3. LOGIKA KALENDER (SAMA)
+// 3. LOGIKA KALENDER
 // ==========================================
 
 var (
@@ -171,7 +163,7 @@ func formatIndoDate(t time.Time) string {
 }
 
 // ==========================================
-// 4. UI & THEME (SAMA)
+// 4. UI & THEME
 // ==========================================
 
 var (
@@ -201,7 +193,7 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 }
 
 // ==========================================
-// 5. HELPER UI (SAMA)
+// 5. HELPER UI
 // ==========================================
 
 func showToast(parent fyne.Canvas, message string) {
@@ -249,7 +241,7 @@ func showUpdateBlocker(parent fyne.Canvas) {
 }
 
 // ==========================================
-// 6. MAIN LOGIC (SAMA)
+// 6. MAIN LOGIC
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
@@ -374,13 +366,21 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		go func() {
 			isValid, _ := checkAppVersion()
 			
+			// GUNAKAN QueueMain AGAR THREAD SAFE DAN MENGHINDARI ERROR DRIVER
+			fyne.CurrentApp().Driver().Run() // Memastikan driver aktif (optional safeguard)
+			
 			if isValid {
-				fyne.CurrentApp().Driver().CanvasForObject(contentStack).Refresh() 
-				if popup != nil { popup.Hide() }
-				onCalculate(selectedDate)
+				// Jalankan logika UI update di Main Thread
+				fyne.CurrentApp().QueueMain(func() {
+					contentStack.Refresh() // << FIX: Simply refresh the object
+					if popup != nil { popup.Hide() }
+					onCalculate(selectedDate)
+				})
 			} else {
-				showUpdateBlocker(parentCanvas)
-				if popup != nil { popup.Hide() } 
+				fyne.CurrentApp().QueueMain(func() {
+					showUpdateBlocker(parentCanvas)
+					if popup != nil { popup.Hide() } 
+				})
 			}
 		}()
 	})
@@ -485,7 +485,8 @@ func main() {
 	updateDateLabel(calcDate)
 
 	performCalculation := func(t time.Time) {
-		fyne.CurrentApp().Driver().CanvasForObject(resultBox).Refresh() 
+		// << FIX: Simply refresh resultBox, no driver call needed
+		resultBox.Refresh() 
 		updateDateLabel(t)
 		resultBox.Objects = nil
 		
