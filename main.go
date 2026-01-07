@@ -1,7 +1,6 @@
 package main
 
 import (
-	_ "embed"
 	"fmt"
 	"image/color"
 	"math"
@@ -11,23 +10,14 @@ import (
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
 
 // ==========================================
-// 1. EMBED RESOURCE (GAMBAR)
-// ==========================================
-
-//go:embed rich.png
-var richPngData []byte
-
-//go:embed bg.png
-var bgPngData []byte
-
-// ==========================================
-// 2. LOGIKA MATEMATIKA & KALENDER JAWA
+// 1. LOGIKA MATEMATIKA & KALENDER
 // ==========================================
 
 var (
@@ -49,16 +39,19 @@ func getJavaneseDate(t time.Time) string {
 	l := jd - 1948440 + 10632 + 1
 	n := (l - 1) / 10631
 	l = l - 10631*n + 354
-	j := (int)((10985 - l) / 5316) * (int)((50 * l) / 17719) + (int)(l / 5670) * (int)((43 * l) / 15238)
-	l = l - (int)((30 - j) / 15) * (int)((17719 * j) / 50) - (int)(j / 16) * (int)((15238 * j) / 43) + 29
-	hm := (int)(24 * l) / 709
-	hd := l - (int)(709 * hm) / 24
+	j := (int)((10985-l)/5316)*(int)((50*l)/17719) + (int)(l/5670)*(int)((43*l)/15238)
+	l = l - (int)((30-j)/15)*(int)((17719*j)/50) - (int)(j/16)*(int)((15238*j)/43) + 29
+
+	hm := (int)(24*l) / 709
+	hd := l - (int)(709*hm)/24
+
 	namaBulanJawa := ""
 	if hm > 0 && hm < len(BulanJawa) {
 		namaBulanJawa = BulanJawa[hm]
 	} else {
 		namaBulanJawa = "Unknown"
 	}
+
 	return fmt.Sprintf("%d %s", hd, namaBulanJawa)
 }
 
@@ -71,12 +64,19 @@ func formatWeton(t time.Time) string {
 	return fmt.Sprintf("%s %s, %s", hari, pasaran, jawaDate)
 }
 
+// Helper khusus untuk mengambil nama pasaran saja
+func getPasaranOnly(t time.Time) string {
+	jd := dateToJDN(t)
+	pasaranIdx := jd % 5
+	return Pasaran[pasaranIdx]
+}
+
 func formatIndoDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), BulanIndo[t.Month()], t.Year())
 }
 
 // ==========================================
-// 3. KOMPONEN UI CUSTOM & COLORS
+// 2. KOMPONEN UI CUSTOM
 // ==========================================
 
 var (
@@ -89,235 +89,12 @@ var (
 	ColorBadgeGreen = color.NRGBA{R: 46, G: 125, B: 50, A: 255}
 	ColorBadgeRed   = color.NRGBA{R: 198, G: 40, B: 40, A: 255}
 	ColorBadgeBlue  = color.NRGBA{R: 21, G: 101, B: 192, A: 255}
-	ColorTextOrange = color.NRGBA{R: 255, G: 165, B: 0, A: 255}
 )
-
-type myTheme struct {
-	fyne.Theme
-}
-
-func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	// Custom Hook: Warna Orange
-	if name == "orange" {
-		return ColorTextOrange
-	}
-	// Custom Hook: Warna Merah (untuk teks Pendhak)
-	if name == "red" {
-		return ColorBadgeRed
-	}
-
-	if name == theme.ColorNamePrimary {
-		return ColorBadgeGreen
-	}
-	if name == theme.ColorNameError {
-		return ColorBadgeRed
-	}
-	if name == theme.ColorNameButton {
-		return color.NRGBA{R: 60, G: 63, B: 70, A: 255}
-	}
-	return m.Theme.Color(name, variant)
-}
-
-// ==========================================
-// 4. LOGIKA KALENDER CUSTOM (ULTRA COMPACT)
-// ==========================================
-
-// Helper untuk menampilkan pesan singkat (Toast)
-func showToast(parent fyne.Canvas, message string) {
-	lbl := widget.NewLabel(message)
-	lbl.Alignment = fyne.TextAlignCenter
-	lbl.TextStyle = fyne.TextStyle{Bold: true}
-
-	// Background hitam transparan untuk toast
-	bg := canvas.NewRectangle(color.NRGBA{R: 0, G: 0, B: 0, A: 220})
-	bg.CornerRadius = 8
-
-	// Container isi toast
-	content := container.NewStack(bg, container.NewPadded(lbl))
-	
-	// Gunakan ModalPopUp
-	toast := widget.NewModalPopUp(content, parent)
-	toast.Show()
-
-	// Timer untuk menutup toast otomatis setelah 1.5 detik
-	go func() {
-		time.Sleep(1500 * time.Millisecond)
-		toast.Hide()
-	}()
-}
-
-func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
-	currentMonth := initialDate
-	selectedDate := initialDate
-	isYearSelectionMode := false
-
-	// STATE BARU: Melacak apakah user sudah klik tanggal
-	isDatePicked := false 
-
-	contentStack := container.NewStack()
-	var popup *widget.PopUp
-
-	var refreshContent func()
-	refreshContent = func() {
-		year, month, _ := currentMonth.Date()
-		titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
-		
-		btnHeader := widget.NewButton(titleText, func() {
-			isYearSelectionMode = !isYearSelectionMode
-			refreshContent()
-		})
-		btnHeader.Importance = widget.LowImportance 
-
-		if !isYearSelectionMode {
-			// --- MODE TANGGAL ---
-			btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-				currentMonth = currentMonth.AddDate(0, -1, 0)
-				refreshContent()
-			})
-			btnNext := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
-				currentMonth = currentMonth.AddDate(0, 1, 0)
-				refreshContent()
-			})
-			
-			topNav := container.NewBorder(nil, nil, btnPrev, btnNext, container.NewCenter(btnHeader))
-
-			gridDays := container.New(layout.NewGridLayout(7))
-			daysHeader := []string{"M", "S", "S", "R", "K", "J", "S"} 
-			for _, dayName := range daysHeader {
-				l := widget.NewLabel(dayName)
-				l.Alignment = fyne.TextAlignCenter
-				l.TextStyle = fyne.TextStyle{Bold: true}
-				gridDays.Add(l)
-			}
-
-			gridDates := container.New(layout.NewGridLayout(7))
-			firstDayOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
-			startWeekday := int(firstDayOfMonth.Weekday())
-			nextMonth := firstDayOfMonth.AddDate(0, 1, 0)
-			lastDay := nextMonth.Add(-time.Hour * 24).Day()
-
-			for i := 0; i < startWeekday; i++ {
-				gridDates.Add(layout.NewSpacer())
-			}
-			for d := 1; d <= lastDay; d++ {
-				dayNum := d
-				dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
-				btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
-				
-				if dateVal.Year() == selectedDate.Year() && 
-				   dateVal.Month() == selectedDate.Month() && 
-				   dateVal.Day() == selectedDate.Day() {
-					btn.Importance = widget.HighImportance 
-				} else {
-					btn.Importance = widget.MediumImportance
-				}
-
-				btn.OnTapped = func() {
-					selectedDate = dateVal
-					isDatePicked = true // Tandai user sudah memilih tanggal
-					refreshContent()
-					if onDateChanged != nil { onDateChanged(selectedDate) }
-				}
-				gridDates.Add(btn)
-			}
-
-			contentStack.Objects = []fyne.CanvasObject{
-				container.NewVBox(topNav, gridDays, gridDates),
-			}
-
-		} else {
-			// --- MODE BULAN TAHUN ---
-			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-				isYearSelectionMode = false
-				refreshContent()
-			})
-			btnBack.Importance = widget.DangerImportance 
-			
-			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
-			lblYear.TextStyle = fyne.TextStyle{Bold: true}
-			lblYear.Alignment = fyne.TextAlignCenter
-
-			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-				currentMonth = currentMonth.AddDate(-1, 0, 0)
-				refreshContent()
-			})
-			btnNextYear := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
-				currentMonth = currentMonth.AddDate(1, 0, 0)
-				refreshContent()
-			})
-			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
-
-			monthGrid := container.New(layout.NewGridLayout(3))
-			for i := 1; i <= 12; i++ {
-				mIdx := i
-				mName := BulanIndo[mIdx]
-				if len(mName) > 3 { mName = mName[:3] }
-				btnMonth := widget.NewButton(mName, func() {
-					currentMonth = time.Date(currentMonth.Year(), time.Month(mIdx), 1, 0, 0, 0, 0, time.Local)
-					isYearSelectionMode = false 
-					refreshContent()
-				})
-				if time.Month(mIdx) == month {
-					btnMonth.Importance = widget.HighImportance
-				} else {
-					btnMonth.Importance = widget.MediumImportance
-				}
-				monthGrid.Add(container.NewCenter(btnMonth))
-			}
-			
-			topRow := container.NewHBox(container.NewCenter(btnBack), layout.NewSpacer())
-			contentStack.Objects = []fyne.CanvasObject{
-				container.NewVBox(topRow, container.NewPadded(yearNav), monthGrid),
-			}
-		}
-		contentStack.Refresh()
-	}
-
-	btnHitung := widget.NewButton("Hitung", func() {
-		// --- VALIDASI: Apakah tanggal sudah dipilih? ---
-		if !isDatePicked {
-			showToast(parentCanvas, "⚠ Pilih tanggal dulu!")
-			// Return agar popup tidak tertutup
-			return 
-		}
-
-		// Jika valid, tutup popup dan hitung
-		if popup != nil { popup.Hide() }
-		onCalculate(selectedDate)
-	})
-	btnHitung.Importance = widget.HighImportance
-	btnHitung.Icon = theme.ConfirmIcon()
-	bottomArea := container.NewCenter(btnHitung)
-
-	refreshContent()
-
-	finalLayout := container.NewBorder(
-		nil, 
-		container.NewPadded(bottomArea), 
-		nil, nil, 
-		contentStack, 
-	)
-
-	bgRect := canvas.NewRectangle(ColorCardBg)
-	bgRect.CornerRadius = 12
-	bgRect.SetMinSize(fyne.NewSize(280, 330)) 
-
-	cardContent := container.NewStack(bgRect, container.NewPadded(finalLayout))
-	centeredPopup := container.NewCenter(cardContent)
-
-	popup = widget.NewModalPopUp(centeredPopup, parentCanvas)
-	popup.Resize(fyne.NewSize(280, 330))
-	popup.Show()
-}
-
-
-// ==========================================
-// 5. HELPER UI CARDS
-// ==========================================
 
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
 	var badgeTextStr string
+
 	switch statusType {
 	case 1:
 		badgeColor = ColorBadgeGreen
@@ -329,57 +106,58 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 		badgeColor = ColorBadgeBlue
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
+
 	lblTitle := canvas.NewText(title, ColorTextWhite)
 	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
+
 	lblSub := canvas.NewText(subTitle, ColorTextGrey)
 	lblSub.TextSize = 12
 	leftCont := container.NewVBox(lblTitle, lblSub)
+
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
 	lblDate.TextSize = 14
 	lblDate.TextStyle = fyne.TextStyle{Bold: true}
+
 	lblWeton := canvas.NewText(wetonStr, ColorTextGrey)
 	lblWeton.Alignment = fyne.TextAlignTrailing
 	lblWeton.TextSize = 11
 	rightCont := container.NewVBox(lblDate, lblWeton)
+
 	topRow := container.NewBorder(nil, nil, leftCont, rightCont)
+
 	lblBadge := canvas.NewText(badgeTextStr, ColorTextWhite)
 	lblBadge.TextSize = 11
 	lblBadge.TextStyle = fyne.TextStyle{Bold: true}
+
 	badgeBg := canvas.NewRectangle(badgeColor)
 	badgeBg.CornerRadius = 12
+
 	badgeCont := container.NewStack(badgeBg, container.NewPadded(lblBadge))
 	botRow := container.NewHBox(badgeCont)
 	content := container.NewVBox(topRow, container.NewPadded(botRow))
+
 	bg := canvas.NewRectangle(ColorCardBg)
 	bg.CornerRadius = 10
 	return container.NewStack(bg, container.NewPadded(content))
 }
 
 // ==========================================
-// 6. MAIN APP
+// 3. SCREEN BUILDERS
 // ==========================================
 
-func main() {
-	myApp := app.New()
-	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()}) 
-
-	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
-	myWindow.Resize(fyne.NewSize(400, 750))
-
-	// --- SETUP BACKGROUND IMAGE ---
-	resBg := fyne.NewStaticResource("bg.png", bgPngData)
-	imgBg := canvas.NewImageFromResource(resBg)
-	imgBg.FillMode = canvas.ImageFillCover 
-	// ------------------------------
-
+// --- Screen 1: Hitung Selamatan (Fitur Lama) ---
+func makeSelamatanScreen(myWindow fyne.Window) fyne.CanvasObject {
+	// Header
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
-	headerTitle := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
+	headerTitle := canvas.NewText("Hitung Selamatan", ColorTextWhite)
 	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
 	headerTitle.TextSize = 18
-	headerIcon := canvas.NewImageFromResource(theme.InfoIcon())
+
+	headerIcon := canvas.NewImageFromResource(theme.HistoryIcon()) // Ganti icon
 	headerIcon.SetMinSize(fyne.NewSize(30, 30))
+
 	headerStack := container.NewStack(
 		gradient,
 		container.NewPadded(container.NewVBox(
@@ -390,32 +168,62 @@ func main() {
 	)
 	headerContainer := container.NewVBox(headerStack)
 
+	inputLabel := canvas.NewText("Pilih Tanggal Geblag / Wafat:", ColorTextGrey)
+	inputLabel.TextSize = 12
+
+	selectedDate := time.Now()
+
+	btnSelectDate := widget.NewButton(selectedDate.Format("02/01/2006"), nil)
+	btnSelectDate.Icon = theme.CalendarIcon()
+	btnSelectDate.Importance = widget.LowImportance
+
+	btnSelectDate.OnTapped = func() {
+		cal := widget.NewCalendar(selectedDate, func(t time.Time) {
+			selectedDate = t
+			btnSelectDate.SetText(t.Format("02/01/2006"))
+		})
+		d := dialog.NewCustom("Pilih Tanggal Wafat", "Tutup", cal, myWindow)
+		d.Resize(fyne.NewSize(300, 300))
+		d.Show()
+	}
+
+	btnCalc := widget.NewButton("Hitung Selamatan", nil)
+	btnCalc.Importance = widget.HighImportance
+
+	inputRow := container.NewBorder(nil, nil, nil, nil, btnSelectDate)
+
+	inputCardBg := canvas.NewRectangle(ColorCardBg)
+	inputCardBg.CornerRadius = 8
+	inputSection := container.NewStack(
+		inputCardBg,
+		container.NewPadded(container.NewVBox(inputLabel, inputRow, layout.NewSpacer(), btnCalc)),
+	)
+
 	resultBox := container.NewVBox()
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
-	calcDate := time.Now()
+	// Footer Logic
+	noteText := "Rumus: 3, 7, 40, 100, Pendhak 1&2, 1000 hari."
+	lblNote := widget.NewLabel(noteText)
+	lblNote.Wrapping = fyne.TextWrapWord
+	lblNote.TextStyle = fyne.TextStyle{Italic: true}
+	footerCardBg := canvas.NewRectangle(ColorCardBg)
+	footerCardBg.CornerRadius = 8
+	footerSection := container.NewStack(
+		footerCardBg,
+		container.NewPadded(container.NewVBox(lblNote)),
+	)
 
-	lblDateTitle := canvas.NewText("Tanggal Wafat / Geblag:", ColorTextGrey)
-	lblDateTitle.TextSize = 12
-	
-	lblSelectedDate := widget.NewLabel("")
-	lblSelectedDate.Alignment = fyne.TextAlignCenter
-	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
-
-	updateDateLabel := func(t time.Time) {
-		lblSelectedDate.SetText(formatIndoDate(t))
-	}
-	updateDateLabel(calcDate)
-
-	performCalculation := func(t time.Time) {
-		updateDateLabel(t)
+	// Calculation Logic
+	btnCalc.OnTapped = func() {
 		resultBox.Objects = nil
-		
+
 		type Event struct {
 			Name   string
 			Sub    string
 			Offset int
 		}
+
 		events := []Event{
 			{"Geblag", "Hari H", 0},
 			{"Nelung", "3 Hari", 2},
@@ -426,143 +234,175 @@ func main() {
 			{"Pendhak II", "2 Tahun", 707},
 			{"Nyewu", "1000 Hari", 999},
 		}
-		
+
+		t := selectedDate
 		now := time.Now()
+		// Normalize time
 		now = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 
 		for _, e := range events {
 			targetDate := t.AddDate(0, 0, e.Offset)
 			targetDate = time.Date(targetDate.Year(), targetDate.Month(), targetDate.Day(), 0, 0, 0, 0, targetDate.Location())
+
 			diff := int(targetDate.Sub(now).Hours() / 24)
+
 			status := 3
 			if diff < 0 {
 				status = 1
 			} else if diff == 0 {
 				status = 2
 			}
-			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), status, diff)
+
+			card := createCard(
+				e.Name,
+				e.Sub,
+				formatIndoDate(targetDate),
+				formatWeton(targetDate),
+				status,
+				diff,
+			)
+
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
 		}
 		resultBox.Refresh()
 	}
 
-	btnOpenCalc := widget.NewButton("Pilih Tanggal & Hitung", nil)
-	btnOpenCalc.Importance = widget.HighImportance
-	btnOpenCalc.Icon = theme.CalendarIcon()
-
-	btnOpenCalc.OnTapped = func() {
-		createCalendarPopup(myWindow.Canvas(), calcDate, 
-			func(realtimeDate time.Time) {
-				// Ini callback saat user klik tanggal (tapi belum hitung)
-				calcDate = realtimeDate
-				updateDateLabel(calcDate) 
-			},
-			func(finalDate time.Time) {
-				// Ini callback saat tombol HITUNG ditekan
-				calcDate = finalDate
-				performCalculation(calcDate)
-			},
-		)
-	}
-
-	inputRow := container.NewBorder(nil, nil, nil, nil, lblSelectedDate)
-	inputCardBg := canvas.NewRectangle(ColorCardBg)
-	inputCardBg.CornerRadius = 8
-	
-	inputSection := container.NewStack(
-		inputCardBg,
-		container.NewPadded(container.NewVBox(
-			lblDateTitle, 
-			inputRow, 
-			layout.NewSpacer(), 
-			container.NewCenter(btnOpenCalc),
-		)),
-	)
-
-	// --- Footer ---
-	// RichText dengan 3 Segmen Warna
-	richNote := widget.NewRichText(
-		// 1. Judul (Orange)
-		&widget.TextSegment{
-			Text: "Notes: ",
-			Style: widget.RichTextStyle{
-				ColorName: "orange", 
-				Inline:    true,
-				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
-			},
-		},
-		// 2. Teks Awal (Default)
-		&widget.TextSegment{
-			Text: "Perhitungan ini menggunakan rumus ",
-			Style: widget.RichTextStyle{
-				Inline:    true,
-				TextStyle: fyne.TextStyle{Italic: true},
-			},
-		},
-		// 3. Teks Khusus (MERAH)
-		&widget.TextSegment{
-			Text: "lusarlu ",
-			Style: widget.RichTextStyle{
-				ColorName: "red", 
-				Inline:    true,
-				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
-			},
-		},
-
-		&widget.TextSegment{
-			Text: "hingga ",
-			Style: widget.RichTextStyle{
-				Inline:    true,
-				TextStyle: fyne.TextStyle{Italic: true},
-			},
-		},
-
-		&widget.TextSegment{
-			Text: "nemsarmo ",
-			Style: widget.RichTextStyle{
-				ColorName: "red", 
-				Inline:    true,
-				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
-			},
-		},
-		// 4. Teks Akhir (Default)
-		&widget.TextSegment{
-			Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.",
-			Style: widget.RichTextStyle{
-				Inline:    true,
-				TextStyle: fyne.TextStyle{Italic: true},
-			},
-		},
-	)
-	richNote.Wrapping = fyne.TextWrapWord
-
-	
-	// --- CREDIT IMAGE ---
-	resRich := fyne.NewStaticResource("rich.png", richPngData)
-	imgCredit := canvas.NewImageFromResource(resRich)
-	imgCredit.FillMode = canvas.ImageFillContain
-	imgCredit.SetMinSize(fyne.NewSize(150, 50))
-
-	footer := container.NewVBox(richNote, container.NewCenter(imgCredit))
-	
-	footerCardBg := canvas.NewRectangle(ColorCardBg)
-	footerCardBg.CornerRadius = 8
-	footerSection := container.NewStack(
-		footerCardBg,
-		container.NewPadded(footer),
-	)
-
-	// --- MENYUSUN LAYOUT UTAMA ---
-	mainContent := container.NewBorder(
+	bgApp := canvas.NewRectangle(ColorBgDark)
+	content := container.NewBorder(
 		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
 		container.NewPadded(footerSection),
 		nil, nil,
 		scrollArea,
 	)
 
-	myWindow.SetContent(container.NewStack(imgBg, mainContent))
+	return container.NewStack(bgApp, content)
+}
+
+// --- Screen 2: Cek Weton (Fitur Baru) ---
+func makeWetonScreen(myWindow fyne.Window) fyne.CanvasObject {
+	// Header
+	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
+	headerTitle := canvas.NewText("Cek Weton Lahir", ColorTextWhite)
+	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
+	headerTitle.TextSize = 18
+	headerIcon := canvas.NewImageFromResource(theme.SearchIcon())
+	headerIcon.SetMinSize(fyne.NewSize(30, 30))
+
+	headerStack := container.NewStack(
+		gradient,
+		container.NewPadded(container.NewVBox(
+			layout.NewSpacer(),
+			container.NewHBox(layout.NewSpacer(), headerIcon, headerTitle, layout.NewSpacer()),
+			layout.NewSpacer(),
+		)),
+	)
+
+	// Input Section
+	inputLabel := canvas.NewText("Pilih Tanggal Lahir:", ColorTextGrey)
+	inputLabel.TextSize = 12
+
+	selectedDate := time.Now()
+
+	btnSelectDate := widget.NewButton(selectedDate.Format("02/01/2006"), nil)
+	btnSelectDate.Icon = theme.CalendarIcon()
+
+	btnSelectDate.OnTapped = func() {
+		cal := widget.NewCalendar(selectedDate, func(t time.Time) {
+			selectedDate = t
+			btnSelectDate.SetText(t.Format("02/01/2006"))
+		})
+		d := dialog.NewCustom("Pilih Tanggal Lahir", "Tutup", cal, myWindow)
+		d.Resize(fyne.NewSize(300, 300))
+		d.Show()
+	}
+
+	// Result Display Components
+	lblResultBig := canvas.NewText("-", ColorTextWhite)
+	lblResultBig.TextSize = 24
+	lblResultBig.TextStyle = fyne.TextStyle{Bold: true}
+	lblResultBig.Alignment = fyne.TextAlignCenter
+
+	lblResultJawa := canvas.NewText("-", ColorHeaderTop)
+	lblResultJawa.TextSize = 16
+	lblResultJawa.Alignment = fyne.TextAlignCenter
+
+	lblResultMasehi := canvas.NewText("-", ColorTextGrey)
+	lblResultMasehi.TextSize = 14
+	lblResultMasehi.Alignment = fyne.TextAlignCenter
+
+	resultContainer := container.NewVBox(
+		layout.NewSpacer(),
+		lblResultBig,
+		lblResultJawa,
+		lblResultMasehi,
+		layout.NewSpacer(),
+	)
+	
+	resultCardBg := canvas.NewRectangle(ColorCardBg)
+	resultCardBg.CornerRadius = 15
+	resultStack := container.NewStack(resultCardBg, container.NewPadded(resultContainer))
+
+	// Button Action
+	btnCheck := widget.NewButton("Cek Weton", func() {
+		hari := HariIndo[selectedDate.Weekday()]
+		pasaran := getPasaranOnly(selectedDate)
+		
+		// Set Text
+		lblResultBig.Text = fmt.Sprintf("%s %s", hari, pasaran)
+		lblResultJawa.Text = fmt.Sprintf("Kalender Jawa: %s", getJavaneseDate(selectedDate))
+		lblResultMasehi.Text = formatIndoDate(selectedDate)
+		
+		// Refresh
+		resultStack.Refresh()
+	})
+	btnCheck.Importance = widget.HighImportance
+
+	// Layout Assembly
+	inputCardBg := canvas.NewRectangle(ColorCardBg)
+	inputCardBg.CornerRadius = 8
+	inputSection := container.NewStack(
+		inputCardBg,
+		container.NewPadded(container.NewVBox(inputLabel, btnSelectDate, layout.NewSpacer(), btnCheck)),
+	)
+
+	// Main Layout for this Tab
+	bgApp := canvas.NewRectangle(ColorBgDark)
+	mainContent := container.NewVBox(
+		headerStack,
+		container.NewPadded(inputSection),
+		layout.NewSpacer(),
+		container.NewPadded(resultStack),
+		layout.NewSpacer(),
+	)
+
+	return container.NewStack(bgApp, mainContent)
+}
+
+// ==========================================
+// 4. MAIN APP
+// ==========================================
+
+func main() {
+	myApp := app.New()
+	myWindow := myApp.NewWindow("Javanese Calc") // Judul Window
+	myWindow.Resize(fyne.NewSize(400, 750))
+
+	// Buat Screen untuk Tab
+	screenSelamatan := makeSelamatanScreen(myWindow)
+	screenWeton := makeWetonScreen(myWindow)
+
+	// Buat Tab Container
+	tabs := container.NewAppTabs(
+		container.NewTabItemWithIcon("Selamatan", theme.ListIcon(), screenSelamatan),
+		container.NewTabItemWithIcon("Cek Weton", theme.SearchIcon(), screenWeton),
+	)
+
+	// Set posisi tab di bawah atau atas (Default atas)
+	tabs.SetTabLocation(container.TabLocationTop)
+
+	myWindow.SetContent(tabs)
 	myWindow.ShowAndRun()
 }
 
