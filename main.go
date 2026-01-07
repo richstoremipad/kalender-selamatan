@@ -1,18 +1,10 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/sha256"
 	_ "embed"
-	"encoding/hex"
-	"errors"
 	"fmt"
 	"image/color"
-	"io"
 	"math"
-	"net/http"
-	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -25,8 +17,9 @@ import (
 )
 
 // ==========================================
-// 1. EMBED RESOURCE
+// 1. EMBED RESOURCE (GAMBAR)
 // ==========================================
+
 //go:embed rich.png
 var richPngData []byte
 
@@ -34,88 +27,7 @@ var richPngData []byte
 var bgPngData []byte
 
 // ==========================================
-// 2. KEAMANAN & KONFIGURASI
-// ==========================================
-
-const (
-	AppVersion = "1.0.0" // Versi aplikasi ini
-
-	// KUNCI RAHASIA (32 Bytes)
-	AesKey = "12345678901234567890123456789012"
-
-	// URL TERENKRIPSI
-	// Ganti string hex ini dengan hasil generator Anda.
-	// Default ini adalah dummy yang akan dilewati oleh logic check.
-	EncryptedUrlHex = "c6b8c8352528753239a58934df146c9c6148684703a55b341d726615b3c5861786576628ec23c4"
-)
-
-// Fungsi Dekripsi AES Universal
-func decryptAES(encryptedHex string) (string, error) {
-	key := []byte(AesKey)
-	
-	cleanHex := strings.TrimSpace(encryptedHex)
-	
-	data, err := hex.DecodeString(cleanHex)
-	if err != nil { return "", err }
-
-	block, err := aes.NewCipher(key)
-	if err != nil { return "", err }
-
-	gcm, err := cipher.NewGCM(block)
-	if err != nil { return "", err }
-
-	nonceSize := gcm.NonceSize()
-	if len(data) < nonceSize { return "", errors.New("cipher too short") }
-
-	nonce, ciphertext := data[:nonceSize], data[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
-	if err != nil { return "", err }
-
-	return string(plaintext), nil
-}
-
-func checkAppVersion() (bool, error) {
-	// TAHAP A: Dekripsi URL
-	realURL, err := decryptAES(EncryptedUrlHex)
-	if err != nil {
-		return true, nil // Fail open
-	}
-	
-	// Jika URL dummy, bypass
-	if strings.Contains(realURL, "601d5ae8907991bec669a142eb418c40c1aad9b1268a31426b85e5d6da821e140c4daea48cc6b70cb0c71279065602496cc07222790784a7064f8a43209187b9301964efc2c612aed3753f4a4644c0e45b995f5e52239c7b8a73f7e691d695c1ca226349c451") {
-		return true, nil
-	}
-
-	// TAHAP B: Request
-	client := http.Client{Timeout: 4 * time.Second}
-	resp, err := client.Get(realURL)
-	if err != nil { return true, nil } 
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 { return true, nil }
-
-	// TAHAP C: Baca Body & Dekripsi
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	encryptedBody := string(bodyBytes)
-
-	serverVersion, err := decryptAES(encryptedBody)
-	if err != nil {
-		return false, nil // Gagal decrypt = data tidak valid/dimanipulasi
-	}
-
-	// TAHAP D: Bandingkan
-	localHash := sha256.Sum256([]byte(AppVersion))
-	serverHash := sha256.Sum256([]byte(serverVersion))
-
-	if localHash == serverHash {
-		return true, nil 
-	}
-
-	return false, nil 
-}
-
-// ==========================================
-// 3. LOGIKA KALENDER
+// 2. LOGIKA MATEMATIKA & KALENDER JAWA
 // ==========================================
 
 var (
@@ -164,7 +76,7 @@ func formatIndoDate(t time.Time) string {
 }
 
 // ==========================================
-// 4. UI & THEME
+// 3. KOMPONEN UI CUSTOM & COLORS
 // ==========================================
 
 var (
@@ -185,71 +97,35 @@ type myTheme struct {
 }
 
 func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
-	if name == "orange" { return ColorTextOrange }
-	if name == "red" { return ColorBadgeRed }
-	if name == theme.ColorNamePrimary { return ColorBadgeGreen }
-	if name == theme.ColorNameError { return ColorBadgeRed }
-	if name == theme.ColorNameButton { return color.NRGBA{R: 60, G: 63, B: 70, A: 255} }
+	// Custom Hook: Warna Orange
+	if name == "orange" {
+		return ColorTextOrange
+	}
+	// Custom Hook: Warna Merah (untuk teks Pendhak)
+	if name == "red" {
+		return ColorBadgeRed
+	}
+
+	if name == theme.ColorNamePrimary {
+		return ColorBadgeGreen
+	}
+	if name == theme.ColorNameError {
+		return ColorBadgeRed
+	}
+	if name == theme.ColorNameButton {
+		return color.NRGBA{R: 60, G: 63, B: 70, A: 255}
+	}
 	return m.Theme.Color(name, variant)
 }
 
 // ==========================================
-// 5. HELPER UI
-// ==========================================
-
-func showToast(parent fyne.Canvas, message string) {
-	lbl := widget.NewLabel(message)
-	lbl.Alignment = fyne.TextAlignCenter
-	lbl.TextStyle = fyne.TextStyle{Bold: true}
-	bg := canvas.NewRectangle(color.NRGBA{R: 0, G: 0, B: 0, A: 220})
-	bg.CornerRadius = 8
-	content := container.NewStack(bg, container.NewPadded(lbl))
-	toast := widget.NewModalPopUp(content, parent)
-	toast.Show()
-	go func() {
-		time.Sleep(1500 * time.Millisecond)
-		toast.Hide()
-	}()
-}
-
-func showUpdateBlocker(parent fyne.Canvas) {
-	icon := widget.NewIcon(theme.WarningIcon())
-	lblTitle := widget.NewLabel("Update Diperlukan")
-	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
-	lblTitle.Alignment = fyne.TextAlignCenter
-	
-	lblMsg := widget.NewLabel("Versi aplikasi Anda (" + AppVersion + ") sudah usang.\nMohon update ke versi terbaru untuk melanjutkan.")
-	lblMsg.Alignment = fyne.TextAlignCenter
-	lblMsg.Wrapping = fyne.TextWrapWord
-
-	btnUpdate := widget.NewButton("Tutup Aplikasi", func() {}) 
-	btnUpdate.Importance = widget.DangerImportance
-
-	content := container.NewVBox(
-		container.NewCenter(icon),
-		lblTitle,
-		lblMsg,
-		layout.NewSpacer(),
-		btnUpdate,
-	)
-	
-	bg := canvas.NewRectangle(ColorCardBg)
-	bg.CornerRadius = 12
-	bg.SetMinSize(fyne.NewSize(300, 200))
-	
-	popup := widget.NewModalPopUp(container.NewStack(bg, container.NewPadded(content)), parent)
-	popup.Show()
-}
-
-// ==========================================
-// 6. MAIN LOGIC
+// 4. LOGIKA KALENDER CUSTOM (ULTRA COMPACT)
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 	isYearSelectionMode := false
-	isDatePicked := false 
 
 	contentStack := container.NewStack()
 	var popup *widget.PopUp
@@ -266,6 +142,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		btnHeader.Importance = widget.LowImportance 
 
 		if !isYearSelectionMode {
+			// --- MODE TANGGAL ---
 			btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(0, -1, 0)
 				refreshContent()
@@ -274,6 +151,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				currentMonth = currentMonth.AddDate(0, 1, 0)
 				refreshContent()
 			})
+			
 			topNav := container.NewBorder(nil, nil, btnPrev, btnNext, container.NewCenter(btnHeader))
 
 			gridDays := container.New(layout.NewGridLayout(7))
@@ -284,6 +162,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				l.TextStyle = fyne.TextStyle{Bold: true}
 				gridDays.Add(l)
 			}
+
 			gridDates := container.New(layout.NewGridLayout(7))
 			firstDayOfMonth := time.Date(year, month, 1, 0, 0, 0, 0, time.Local)
 			startWeekday := int(firstDayOfMonth.Weekday())
@@ -297,31 +176,37 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				dayNum := d
 				dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
 				btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
-				if dateVal.Year() == selectedDate.Year() && dateVal.Month() == selectedDate.Month() && dateVal.Day() == selectedDate.Day() {
+				if dateVal.Year() == selectedDate.Year() && 
+				   dateVal.Month() == selectedDate.Month() && 
+				   dateVal.Day() == selectedDate.Day() {
 					btn.Importance = widget.HighImportance 
 				} else {
 					btn.Importance = widget.MediumImportance
 				}
 				btn.OnTapped = func() {
 					selectedDate = dateVal
-					isDatePicked = true 
 					refreshContent()
 					if onDateChanged != nil { onDateChanged(selectedDate) }
 				}
 				gridDates.Add(btn)
 			}
+
 			contentStack.Objects = []fyne.CanvasObject{
 				container.NewVBox(topNav, gridDays, gridDates),
 			}
+
 		} else {
+			// --- MODE BULAN TAHUN ---
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				isYearSelectionMode = false
 				refreshContent()
 			})
 			btnBack.Importance = widget.DangerImportance 
+			
 			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
 			lblYear.TextStyle = fyne.TextStyle{Bold: true}
 			lblYear.Alignment = fyne.TextAlignCenter
+
 			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(-1, 0, 0)
 				refreshContent()
@@ -331,6 +216,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				refreshContent()
 			})
 			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
+
 			monthGrid := container.New(layout.NewGridLayout(3))
 			for i := 1; i <= 12; i++ {
 				mIdx := i
@@ -348,6 +234,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				}
 				monthGrid.Add(container.NewCenter(btnMonth))
 			}
+			
 			topRow := container.NewHBox(container.NewCenter(btnBack), layout.NewSpacer())
 			contentStack.Objects = []fyne.CanvasObject{
 				container.NewVBox(topRow, container.NewPadded(yearNav), monthGrid),
@@ -357,39 +244,26 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	}
 
 	btnHitung := widget.NewButton("Hitung", func() {
-		if !isDatePicked {
-			showToast(parentCanvas, "⚠ Pilih tanggal dulu!")
-			return 
-		}
-
-		showToast(parentCanvas, "Memeriksa Validitas...")
-		
-		// Proses di background
-		go func() {
-			isValid, _ := checkAppVersion()
-			
-			// Jika valid, lanjutkan proses
-			if isValid {
-				// Refresh UI secara langsung (Fyne handle refresh dengan aman untuk properti sederhana)
-				contentStack.Refresh() 
-				if popup != nil { popup.Hide() }
-				onCalculate(selectedDate)
-			} else {
-				// Tampilkan blocker jika tidak valid
-				showUpdateBlocker(parentCanvas)
-				if popup != nil { popup.Hide() } 
-			}
-		}()
+		if popup != nil { popup.Hide() }
+		onCalculate(selectedDate)
 	})
 	btnHitung.Importance = widget.HighImportance
 	btnHitung.Icon = theme.ConfirmIcon()
 	bottomArea := container.NewCenter(btnHitung)
 
 	refreshContent()
-	finalLayout := container.NewBorder(nil, container.NewPadded(bottomArea), nil, nil, contentStack)
+
+	finalLayout := container.NewBorder(
+		nil, 
+		container.NewPadded(bottomArea), 
+		nil, nil, 
+		contentStack, 
+	)
+
 	bgRect := canvas.NewRectangle(ColorCardBg)
 	bgRect.CornerRadius = 12
 	bgRect.SetMinSize(fyne.NewSize(280, 330)) 
+
 	cardContent := container.NewStack(bgRect, container.NewPadded(finalLayout))
 	centeredPopup := container.NewCenter(cardContent)
 
@@ -397,6 +271,11 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	popup.Resize(fyne.NewSize(280, 330))
 	popup.Show()
 }
+
+
+// ==========================================
+// 5. HELPER UI CARDS
+// ==========================================
 
 func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
@@ -440,15 +319,22 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 	return container.NewStack(bg, container.NewPadded(content))
 }
 
+// ==========================================
+// 6. MAIN APP
+// ==========================================
+
 func main() {
 	myApp := app.New()
 	myApp.Settings().SetTheme(&myTheme{Theme: theme.DefaultTheme()}) 
+
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa")
 	myWindow.Resize(fyne.NewSize(400, 750))
 
+	// --- SETUP BACKGROUND IMAGE ---
 	resBg := fyne.NewStaticResource("bg.png", bgPngData)
 	imgBg := canvas.NewImageFromResource(resBg)
 	imgBg.FillMode = canvas.ImageFillCover 
+	// ------------------------------
 
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
 	headerTitle := canvas.NewText("Kalkulator Selamatan Jawa", ColorTextWhite)
@@ -470,8 +356,10 @@ func main() {
 	scrollArea := container.NewVScroll(container.NewPadded(resultBox))
 
 	calcDate := time.Now()
+
 	lblDateTitle := canvas.NewText("Tanggal Wafat / Geblag:", ColorTextGrey)
 	lblDateTitle.TextSize = 12
+	
 	lblSelectedDate := widget.NewLabel("")
 	lblSelectedDate.Alignment = fyne.TextAlignCenter
 	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
@@ -482,10 +370,8 @@ func main() {
 	updateDateLabel(calcDate)
 
 	performCalculation := func(t time.Time) {
-		// Gunakan RemoveAll untuk membersihkan container dengan aman
-		resultBox.RemoveAll()
-		
 		updateDateLabel(t)
+		resultBox.Objects = nil
 		
 		type Event struct {
 			Name   string
@@ -521,13 +407,13 @@ func main() {
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
 		}
-		// Refresh container agar perubahan terlihat
 		resultBox.Refresh()
 	}
 
 	btnOpenCalc := widget.NewButton("Pilih Tanggal & Hitung", nil)
 	btnOpenCalc.Importance = widget.HighImportance
 	btnOpenCalc.Icon = theme.CalendarIcon()
+
 	btnOpenCalc.OnTapped = func() {
 		createCalendarPopup(myWindow.Canvas(), calcDate, 
 			func(realtimeDate time.Time) {
@@ -544,6 +430,7 @@ func main() {
 	inputRow := container.NewBorder(nil, nil, nil, nil, lblSelectedDate)
 	inputCardBg := canvas.NewRectangle(ColorCardBg)
 	inputCardBg.CornerRadius = 8
+	
 	inputSection := container.NewStack(
 		inputCardBg,
 		container.NewPadded(container.NewVBox(
@@ -554,26 +441,80 @@ func main() {
 		)),
 	)
 
+	// --- Footer ---
+	// MODIFIKASI: RichText dengan 3 Segmen Warna (Orange, Default, Red)
 	richNote := widget.NewRichText(
-		&widget.TextSegment{Text: "Notes: ", Style: widget.RichTextStyle{ColorName: "orange", Inline: true, TextStyle: fyne.TextStyle{Italic: true, Bold: true}}},
-		&widget.TextSegment{Text: "Perhitungan ini menggunakan rumus ", Style: widget.RichTextStyle{Inline: true, TextStyle: fyne.TextStyle{Italic: true}}},
-		&widget.TextSegment{Text: "lusarlu ", Style: widget.RichTextStyle{ColorName: "red", Inline: true, TextStyle: fyne.TextStyle{Italic: true, Bold: true}}},
-		&widget.TextSegment{Text: "hingga ", Style: widget.RichTextStyle{Inline: true, TextStyle: fyne.TextStyle{Italic: true}}},
-		&widget.TextSegment{Text: "nemsarmo ", Style: widget.RichTextStyle{ColorName: "red", Inline: true, TextStyle: fyne.TextStyle{Italic: true, Bold: true}}},
-		&widget.TextSegment{Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.", Style: widget.RichTextStyle{Inline: true, TextStyle: fyne.TextStyle{Italic: true}}},
+		// 1. Judul (Orange)
+		&widget.TextSegment{
+			Text: "Notes: ",
+			Style: widget.RichTextStyle{
+				ColorName: "orange", 
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
+			},
+		},
+		// 2. Teks Awal (Default)
+		&widget.TextSegment{
+			Text: "Perhitungan ini menggunakan rumus ",
+			Style: widget.RichTextStyle{
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true},
+			},
+		},
+		// 3. Teks Khusus (MERAH)
+		&widget.TextSegment{
+			Text: "lusarlu ",
+			Style: widget.RichTextStyle{
+				ColorName: "red", // Request warna merah ke tema
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
+			},
+		},
+
+		&widget.TextSegment{
+			Text: "hingga ",
+			Style: widget.RichTextStyle{
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true},
+			},
+		},
+
+		&widget.TextSegment{
+			Text: "nemsarmo ",
+			Style: widget.RichTextStyle{
+				ColorName: "red", // Request warna merah ke tema
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
+			},
+		},
+		// 4. Teks Akhir (Default)
+		&widget.TextSegment{
+			Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.",
+			Style: widget.RichTextStyle{
+				Inline:    true,
+				TextStyle: fyne.TextStyle{Italic: true},
+			},
+		},
 	)
 	richNote.Wrapping = fyne.TextWrapWord
+
 	
+	// --- CREDIT IMAGE ---
 	resRich := fyne.NewStaticResource("rich.png", richPngData)
 	imgCredit := canvas.NewImageFromResource(resRich)
 	imgCredit.FillMode = canvas.ImageFillContain
 	imgCredit.SetMinSize(fyne.NewSize(150, 50))
 
 	footer := container.NewVBox(richNote, container.NewCenter(imgCredit))
+	
 	footerCardBg := canvas.NewRectangle(ColorCardBg)
 	footerCardBg.CornerRadius = 8
-	footerSection := container.NewStack(footerCardBg, container.NewPadded(footer))
+	footerSection := container.NewStack(
+		footerCardBg,
+		container.NewPadded(footer),
+	)
 
+	// --- MENYUSUN LAYOUT UTAMA ---
 	mainContent := container.NewBorder(
 		container.NewVBox(headerContainer, container.NewPadded(inputSection)),
 		container.NewPadded(footerSection),
