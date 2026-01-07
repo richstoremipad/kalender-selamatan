@@ -21,7 +21,7 @@ jobs:
         run: |
           $HOME/go/bin/fyne-cross android \
             -app-id com.kalender.selamatan \
-            -arch= "arm , arm64" \
+            -arch arm64-v8a,armeabi-v7a \
             -name "Cek Selamatan" \
             -ldflags="-s -w" \
             -icon=icon.png
