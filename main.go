@@ -220,7 +220,6 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 }
 
 // --- WIDGET KLIKABLE CUSTOM ---
-// Widget ini membungkus container agar bisa menerima event Tap (Klik)
 type clickableCard struct {
 	widget.BaseWidget
 	content fyne.CanvasObject
@@ -490,21 +489,15 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 
 	visualCard := container.NewStack(bg, container.NewPadded(content))
 
-	// Jika ada deskripsi (Tab Selamatan), buat menjadi clickable
 	if descStr != "" && parentCanvas != nil {
 		return newClickableCard(visualCard, func() {
-			// LOGIKA POPUP DESKRIPSI
-			
-			// 1. Konten Teks (Scrollable)
 			lblDesc := widget.NewLabel(descStr)
 			lblDesc.Wrapping = fyne.TextWrapWord
 			
-			// 2. Judul Popup
 			lblHeader := widget.NewLabel("Penjelasan Fase: " + title)
 			lblHeader.Alignment = fyne.TextAlignCenter
 			lblHeader.TextStyle = fyne.TextStyle{Bold: true}
 			
-			// 3. Tombol Tutup
 			var popup *widget.PopUp
 			btnClose := widget.NewButton("Tutup", func() {
 				if popup != nil {
@@ -514,7 +507,7 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 			btnClose.Importance = widget.HighImportance
 
 			scrollContainer := container.NewVScroll(container.NewPadded(lblDesc))
-			scrollContainer.SetMinSize(fyne.NewSize(0, 300)) // Minimal tinggi scroll
+			scrollContainer.SetMinSize(fyne.NewSize(0, 300))
 
 			contentBox := container.NewBorder(
 				lblHeader, 
@@ -534,8 +527,6 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 			popup.Show()
 		})
 	}
-
-	// Jika tidak ada deskripsi (Tab Weton), kembalikan card biasa
 	return visualCard
 }
 
@@ -625,11 +616,7 @@ func main() {
 			} else if diff == 0 {
 				status = 2
 			}
-			
-			// Ambil deskripsi dari Map Global
 			desc := DeskripsiFase[e.Name]
-			
-			// Passing myWindow.Canvas() agar popup bisa muncul
 			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), e.Rumus, desc, status, diff, myWindow.Canvas())
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
@@ -696,8 +683,6 @@ func main() {
 		wetonResultBox.Objects = nil
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 		neptuStr := calculateNeptu(t)
-		
-		// Untuk weton, deskripsi kosong ("") jadi tidak bisa diklik
 		card := createCard("Hasil Weton", neptuStr, formatIndoDate(t), formatWeton(t), "", "", 4, 0, nil)
 		wetonResultBox.Add(card)
 		wetonResultBox.Refresh()
@@ -738,16 +723,12 @@ func main() {
 	)
 
 	// =======================================================
-	// TAB CONTROL & FOOTER
+	// FOOTER SETUP (DINAMIS)
 	// =======================================================
 
-	tabs := container.NewAppTabs(
-		container.NewTabItem("Hitung Selamatan", tabContentSelamatan),
-		container.NewTabItem("Cek Weton Lahir", tabContentWeton),
-	)
-	tabs.SetTabLocation(container.TabLocationTop)
-
-	richNote := widget.NewRichText(
+	// 1. Footer untuk Selamatan (SESUAI SCRIPT ASLI/ORIGINAL)
+	richNoteSelamatan := widget.NewRichText(
+		// 1. Judul (Orange)
 		&widget.TextSegment{
 			Text: "Notes: ",
 			Style: widget.RichTextStyle{
@@ -756,6 +737,7 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
+		// 2. Teks Awal (Default)
 		&widget.TextSegment{
 			Text: "Perhitungan ini menggunakan rumus ",
 			Style: widget.RichTextStyle{
@@ -763,14 +745,16 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true},
 			},
 		},
+		// 3. Teks Khusus (MERAH)
 		&widget.TextSegment{
 			Text: "lusarlu ",
 			Style: widget.RichTextStyle{
-				ColorName: "red",
+				ColorName: "red", 
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
+
 		&widget.TextSegment{
 			Text: "hingga ",
 			Style: widget.RichTextStyle{
@@ -778,14 +762,16 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true},
 			},
 		},
+
 		&widget.TextSegment{
 			Text: "nemsarmo ",
 			Style: widget.RichTextStyle{
-				ColorName: "red",
+				ColorName: "red", 
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
+		// 4. Teks Akhir (Default)
 		&widget.TextSegment{
 			Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.",
 			Style: widget.RichTextStyle{
@@ -794,21 +780,67 @@ func main() {
 			},
 		},
 	)
-	richNote.Wrapping = fyne.TextWrapWord
+	richNoteSelamatan.Wrapping = fyne.TextWrapWord
+
+	// 2. Footer untuk Weton (BARU)
+	richNoteWeton := widget.NewRichText(
+		&widget.TextSegment{
+			Text: "Notes: ",
+			Style: widget.RichTextStyle{ColorName: "orange", Inline: true, TextStyle: fyne.TextStyle{Italic: true, Bold: true}},
+		},
+		&widget.TextSegment{
+			Text: "Perhitungan Weton ini menjumlahkan neptu ",
+			Style: widget.RichTextStyle{Inline: true, TextStyle: fyne.TextStyle{Italic: true}},
+		},
+		&widget.TextSegment{
+			Text: "Hari dan Pasaran ",
+			Style: widget.RichTextStyle{ColorName: "primary", Inline: true, TextStyle: fyne.TextStyle{Italic: true, Bold: true}},
+		},
+		&widget.TextSegment{
+			Text: "sesuai pakem Primbon Jawa. (Minggu=5, Senin=4, Selasa=3, Rabu=7, Kamis=8, Jumat=6, Sabtu=9) & (Legi=5, Pahing=9, Pon=7, Wage=4, Kliwon=8).",
+			Style: widget.RichTextStyle{Inline: true, TextStyle: fyne.TextStyle{Italic: true}},
+		},
+	)
+	richNoteWeton.Wrapping = fyne.TextWrapWord
+
+	// Container untuk Footer Teks
+	noteContainer := container.NewStack()
+	noteContainer.Add(richNoteSelamatan) // Default awal
 
 	resRich := fyne.NewStaticResource("rich.png", richPngData)
 	imgCredit := canvas.NewImageFromResource(resRich)
 	imgCredit.FillMode = canvas.ImageFillContain
 	imgCredit.SetMinSize(fyne.NewSize(150, 50))
 
-	footer := container.NewVBox(richNote, container.NewCenter(imgCredit))
+	footerContent := container.NewVBox(noteContainer, container.NewCenter(imgCredit))
 
 	footerCardBg := canvas.NewRectangle(ColorCardBg)
 	footerCardBg.CornerRadius = 8
 	footerSection := container.NewStack(
 		footerCardBg,
-		container.NewPadded(footer),
+		container.NewPadded(footerContent),
 	)
+
+	// =======================================================
+	// TAB CONTROL
+	// =======================================================
+
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Hitung Selamatan", tabContentSelamatan),
+		container.NewTabItem("Cek Weton Lahir", tabContentWeton),
+	)
+	tabs.SetTabLocation(container.TabLocationTop)
+
+	// LOGIKA GANTI FOOTER SAAT TAB DIKLIK
+	tabs.OnSelected = func(i *container.TabItem) {
+		noteContainer.Objects = nil // Kosongkan container
+		if i.Text == "Hitung Selamatan" {
+			noteContainer.Add(richNoteSelamatan)
+		} else {
+			noteContainer.Add(richNoteWeton)
+		}
+		noteContainer.Refresh()
+	}
 
 	mainContent := container.NewBorder(
 		headerContainer,
