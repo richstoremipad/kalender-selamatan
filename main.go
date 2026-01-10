@@ -373,7 +373,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				refreshContent()
 			})
 
-			// MODIFIKASI: Angka Tahun Transparan (LowImportance)
+			// Angka Tahun Transparan (LowImportance)
 			btnYearNum := widget.NewButton(fmt.Sprintf("%d", year), func() {
 				currentViewMode = 2 // Masuk mode scroll
 				refreshContent()
@@ -423,13 +423,13 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			endYear := 2100
 			totalYears := endYear - startYear + 1
 			
-			// LOGIKA SCROLL KE TENGAH
-			// Cari index tahun saat ini
+			// LOGIKA SCROLL:
+			// List Item Height +/- 40px. Box Height +/- 300px.
+			// Center is around 3rd or 4th item.
+			// Target: Baris ke-3 (Index 2).
 			actualIndex := year - startYear
-			// Kurangi 2 (bukan 3) agar posisi lebih ke tengah visual
 			scrollIndex := actualIndex - 2
 			
-			// Safety check agar tidak minus
 			if scrollIndex < 0 { scrollIndex = 0 }
 			if scrollIndex >= totalYears { scrollIndex = totalYears - 1 }
 
@@ -447,9 +447,8 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					btn := o.(*widget.Button)
 					btn.SetText(fmt.Sprintf("%d", displayYear))
 					
-					// Warna tombol tahun dibuat standar (Medium) agar tidak norak tapi tetap terlihat tombol
-					// Tidak ada Highlight warna khusus untuk tahun aktif
-					btn.Importance = widget.MediumImportance
+					// FIX: LowImportance agar transparan/tidak ada kotak pembungkus (hanya teks)
+					btn.Importance = widget.LowImportance
 					
 					btn.OnTapped = func() {
 						currentMonth = time.Date(displayYear, month, 1, 0, 0, 0, 0, time.Local)
@@ -475,9 +474,9 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			
 			contentStack.Objects = []fyne.CanvasObject{yearView}
 			
-			// FIX: Gunakan Goroutine + Sleep 200ms untuk memastikan Layout siap sebelum Scroll
+			// FIX: Jeda 300ms untuk memastikan layout siap sebelum scroll
 			go func() {
-				time.Sleep(200 * time.Millisecond) // Jeda 200ms
+				time.Sleep(300 * time.Millisecond) 
 				list.ScrollTo(widget.ListItemID(scrollIndex))
 			}()
 		}
