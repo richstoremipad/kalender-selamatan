@@ -5,10 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/color"
+	"io"
 	"math"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -24,17 +26,18 @@ import (
 // KONFIGURASI VERSI APLIKASI
 // ==========================================
 
-// GANTI URL INI DENGAN URL ASLI ANDA
-const UpdateCheckURL = "https://docs.google.com/document/d/1lUsaXSR6arcTsxpwlZLvVeu37Kk-G7XjyQkOUC-du5I/export?format=txt" 
+// GANTI DENGAN LINK EXPORT GOOGLE DOCS ANDA
+// Format: https://docs.google.com/document/d/ID_DOKUMEN/export?format=txt
+const UpdateCheckURL = "https://docs.google.com/document/d/1lUsaXSR6arcTsxpwlZLvVeu37Kk-G7XjyQkOUC-du5I/export?format=txt"
 
-// VERSI APLIKASI SAAT INI
+// Versi Aplikasi Saat Ini
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
 	Version     string `json:"version"`
 	Title       string `json:"title"`
 	Message     string `json:"message"`
-	DownloadURL string `json:"download_url"` 
+	DownloadURL string `json:"download_url"`
 }
 
 // ==========================================
@@ -647,71 +650,95 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // 7. MAIN APP
 // ==========================================
 
-// --- UPDATE CHECKER LOGIC (MAXIMUM ANTI-CACHE) ---
+// --- FUNGSI PEMBERSIH HANTU ---
+func cleanGoogleDocsJSON(dirty string) string {
+	// 1. Buang BOM (Byte Order Mark) di awal file
+	// Karakter \ufeff sering muncul di awal teks Google Docs
+	clean := strings.TrimPrefix(dirty, "\ufeff")
+
+	// 2. Ganti Smart Quotes (Kutip Keriting) menjadi Straight Quotes (Kutip Lurus)
+	// Google otomatis mengubah " jadi “ atau ”
+	clean = strings.ReplaceAll(clean, "“", "\"")
+	clean = strings.ReplaceAll(clean, "”", "\"")
+
+	// 3. Ganti Smart Apostrophe (opsional, tapi aman dilakukan)
+	clean = strings.ReplaceAll(clean, "‘", "'")
+	clean = strings.ReplaceAll(clean, "’", "'")
+
+	// 4. Buang Spasi Aneh (Non-Breaking Space, Zero Width Space)
+	clean = strings.ReplaceAll(clean, "\u00a0", " ") // NBSP jadi spasi biasa
+	clean = strings.ReplaceAll(clean, "\u200b", "")  // Zero width space hapus
+
+	// 5. Trim spasi depan belakang
+	return strings.TrimSpace(clean)
+}
+
 func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 	go func() {
-		// Logika: Tunggu aplikasi tampil (3 detik), lalu cek.
 		time.Sleep(3 * time.Second)
 
-		fmt.Println("--- Memulai Pengecekan Update ---")
+		fmt.Println("--- Memulai Pengecekan Update via Google Docs ---")
 
-		var updateInfo UpdateData
-
-		// 1. URL Unik (Cache Busting)
-		// Menambahkan parameter ?t=123456789 agar server menganggap ini request baru
-		uniqueURL := fmt.Sprintf("%s?t=%d", UpdateCheckURL, time.Now().UnixNano())
+		// Anti Cache: Tambah timestamp
+		uniqueURL := fmt.Sprintf("%s&t=%d", UpdateCheckURL, time.Now().UnixNano())
 		fmt.Println("Target URL:", uniqueURL)
 
-		// 2. HTTP Request dengan Header Agresif
 		req, err := http.NewRequest("GET", uniqueURL, nil)
 		if err != nil {
-			fmt.Println("Gagal membuat request:", err)
 			return
 		}
-		// Header standar untuk memaksa server memberikan data terbaru
+		// Header Anti-Cache
 		req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		req.Header.Set("Pragma", "no-cache")
 		req.Header.Set("Expires", "0")
 
-		// 3. Transport Layer (Mematikan Cache Internal Go)
-		tr := &http.Transport{
-			DisableKeepAlives: true, // Jangan pakai koneksi lama
-		}
-		client := &http.Client{
-			Transport: tr,
-			Timeout:   10 * time.Second,
-		}
+		// Matikan KeepAlives
+		tr := &http.Transport{DisableKeepAlives: true}
+		client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 
 		resp, err := client.Do(req)
 		if err != nil {
-			fmt.Println("Gagal koneksi (Offline?):", err)
-			return 
+			fmt.Println("Error koneksi:", err)
+			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			fmt.Println("Server merespon error:", resp.StatusCode)
+			fmt.Println("Status tidak OK:", resp.StatusCode)
 			return
 		}
 
-		if err := json.NewDecoder(resp.Body).Decode(&updateInfo); err != nil {
-			fmt.Println("Gagal decode JSON:", err)
+		// --- BAGIAN PENTING: BACA MANUAL & BERSIHKAN ---
+		// Kita tidak pakai json.NewDecoder langsung, karena teksnya kotor.
+		// Kita baca dulu sebagai string, bersihkan, baru decode.
+
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Gagal baca body:", err)
 			return
 		}
 
-		fmt.Printf("Data Server: %+v\n", updateInfo)
-		fmt.Printf("Versi App: %s, Versi Server: %s\n", CurrentAppVersion, updateInfo.Version)
+		rawString := string(bodyBytes)
+		// PANGGIL FUNGSI PEMBERSIH HANTU
+		cleanString := cleanGoogleDocsJSON(rawString)
 
-		// 4. Bandingkan Versi
+		fmt.Println("Raw Content (Cuplikan):", rawString[:int(math.Min(float64(len(rawString)), 50))])
+		fmt.Println("Clean Content (Cuplikan):", cleanString[:int(math.Min(float64(len(cleanString)), 50))])
+
+		var updateInfo UpdateData
+		// Parse dari string yang sudah bersih
+		if err := json.Unmarshal([]byte(cleanString), &updateInfo); err != nil {
+			fmt.Println("JSON Error (Masih ada sampah?):", err)
+			return
+		}
+
+		fmt.Printf("Versi Server: %s\n", updateInfo.Version)
+
 		if updateInfo.Version == CurrentAppVersion {
-			fmt.Println("Versi sudah paling baru. Tidak menampilkan popup.")
-			return 
+			return
 		}
 
-		fmt.Println("Update ditemukan! Menampilkan Popup...")
-
-		// 5. TAMPILKAN POPUP
-		
+		// --- TAMPILKAN POPUP (UI SAMA SEPERTI SEBELUMNYA) ---
 		lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
 		lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 		lblTitle.TextSize = 16
@@ -726,27 +753,18 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 		msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
 		msgText.Wrapping = fyne.TextWrapWord
 
-		// Tombol Keluar (KIRI) - AMAN DENGAN OS.EXIT
-		btnExit := widget.NewButton("Keluar", func() {
-			os.Exit(0) 
-		})
-		btnExit.Importance = widget.DangerImportance 
+		btnExit := widget.NewButton("Keluar", func() { os.Exit(0) })
+		btnExit.Importance = widget.DangerImportance
 
-		// Tombol Update (KANAN)
 		btnUpdate := widget.NewButton("Update", func() {
 			u, err := url.Parse(updateInfo.DownloadURL)
 			if err == nil {
 				myApp.OpenURL(u)
 			}
 		})
-		btnUpdate.Importance = widget.HighImportance 
+		btnUpdate.Importance = widget.HighImportance
 
-		// Layout Tombol: [Keluar] <--- SPASI ---> [Update]
-		buttonRow := container.NewHBox(
-			btnExit,
-			layout.NewSpacer(), 
-			btnUpdate,
-		)
+		buttonRow := container.NewHBox(btnExit, layout.NewSpacer(), btnUpdate)
 
 		mainContent := container.NewVBox(
 			lblTitle,
@@ -755,27 +773,15 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			msgText,
 		)
 
-		finalLayout := container.NewBorder(
-			nil,                         
-			container.NewPadded(buttonRow), 
-			nil,                          
-			nil,                         
-			container.NewPadded(mainContent),
-		)
-
+		finalLayout := container.NewBorder(nil, container.NewPadded(buttonRow), nil, nil, container.NewPadded(mainContent))
 		bgRect := canvas.NewRectangle(ColorCardBg)
 		bgRect.CornerRadius = 12
 		bgRect.SetMinSize(fyne.NewSize(280, 250))
-
-		popupContent := container.NewStack(
-			bgRect,
-			container.NewPadded(finalLayout),
-		)
+		popupContent := container.NewStack(bgRect, container.NewPadded(finalLayout))
 
 		popup := widget.NewModalPopUp(container.NewCenter(popupContent), myCanvas)
 		popup.Resize(fyne.NewSize(320, 300))
 		popup.Show()
-
 	}()
 }
 
@@ -1097,9 +1103,6 @@ func main() {
 
 	myWindow.SetContent(container.NewStack(imgBg, mainContent))
 
-	// ========================================
-	// PANGGIL FUNGSI CEK UPDATE DI SINI
-	// ========================================
 	checkForUpdates(myWindow.Canvas(), myApp)
 
 	myWindow.ShowAndRun()
