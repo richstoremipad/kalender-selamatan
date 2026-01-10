@@ -132,7 +132,7 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 }
 
 // ==========================================
-// 4. LOGIKA KALENDER CUSTOM (MODIFIED)
+// 4. LOGIKA KALENDER CUSTOM
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
@@ -154,17 +154,12 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	toastBg := canvas.NewRectangle(color.NRGBA{R: 0, G: 0, B: 0, A: 200})
 	toastBg.CornerRadius = 8
 	
-	// Wadah Toast (Padding + Background)
 	toastCard := container.NewStack(toastBg, container.NewPadded(toastText))
-	
-	// Center Toast di tengah Popup
 	toastWrapper := container.NewCenter(toastCard)
-	toastWrapper.Hide() // Sembunyikan default
+	toastWrapper.Hide()
 
-	// Fungsi untuk menampilkan Toast sebentar
 	showToast := func() {
 		toastWrapper.Show()
-		// Timer untuk hide kembali setelah 2 detik
 		go func() {
 			time.Sleep(2 * time.Second)
 			toastWrapper.Hide()
@@ -219,8 +214,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
 				btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
 				
-				// LOGIKA WARNA HIJAU:
-				// Hanya hijau jika hasSelected == true DAN tanggalnya cocok
 				if hasSelected &&
 					dateVal.Year() == selectedDate.Year() &&
 					dateVal.Month() == selectedDate.Month() &&
@@ -232,7 +225,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				
 				btn.OnTapped = func() {
 					selectedDate = dateVal
-					hasSelected = true // User sudah memilih
+					hasSelected = true
 					refreshContent()
 					if onDateChanged != nil {
 						onDateChanged(selectedDate)
@@ -295,15 +288,11 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		contentStack.Refresh()
 	}
 
-	// TOMBOL PILIH
 	btnHitung := widget.NewButton("Pilih", func() {
-		// VALIDASI: Cek apakah user sudah pilih tanggal (Hijau)
 		if !hasSelected {
-			showToast() // Munculkan peringatan
-			return // Stop, jangan tutup popup
+			showToast()
+			return
 		}
-
-		// Jika sudah pilih, lanjut
 		if popup != nil {
 			popup.Hide()
 		}
@@ -326,11 +315,10 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	bgRect.CornerRadius = 12
 	bgRect.SetMinSize(fyne.NewSize(280, 330))
 
-	// LAYER POPUP: Background -> Layout Kalender -> Toast Overlay
 	cardContent := container.NewStack(
 		bgRect, 
 		container.NewPadded(finalLayout),
-		toastWrapper, // Toast ditaruh paling atas agar menutupi saat muncul
+		toastWrapper,
 	)
 	centeredPopup := container.NewCenter(cardContent)
 
@@ -343,7 +331,8 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 // 5. HELPER UI CARDS
 // ==========================================
 
-func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffDays int) fyne.CanvasObject {
+// UPDATED: Added rumusStr parameter
+func createCard(title, subTitle, dateStr, wetonStr, rumusStr string, statusType int, diffDays int) fyne.CanvasObject {
 	var badgeColor color.Color
 	var badgeTextStr string
 	switch statusType {
@@ -357,20 +346,37 @@ func createCard(title, subTitle, dateStr, wetonStr string, statusType int, diffD
 		badgeColor = ColorBadgeBlue
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
+	
+	// Left Side
 	lblTitle := canvas.NewText(title, ColorTextWhite)
 	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 	lblSub := canvas.NewText(subTitle, ColorTextGrey)
 	lblSub.TextSize = 12
 	leftCont := container.NewVBox(lblTitle, lblSub)
+	
+	// Right Side
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
 	lblDate.TextSize = 14
 	lblDate.TextStyle = fyne.TextStyle{Bold: true}
+	
 	lblWeton := canvas.NewText(wetonStr, ColorTextGrey)
 	lblWeton.Alignment = fyne.TextAlignTrailing
 	lblWeton.TextSize = 11
-	rightCont := container.NewVBox(lblDate, lblWeton)
+	
+	// NEW: Label Rumus
+	var rightCont *fyne.Container
+	if rumusStr != "" {
+		lblRumus := canvas.NewText(rumusStr, ColorTextOrange) // Pakai warna Orange biar beda
+		lblRumus.Alignment = fyne.TextAlignTrailing
+		lblRumus.TextSize = 10
+		lblRumus.TextStyle = fyne.TextStyle{Italic: true}
+		rightCont = container.NewVBox(lblDate, lblWeton, lblRumus)
+	} else {
+		rightCont = container.NewVBox(lblDate, lblWeton)
+	}
+
 	topRow := container.NewBorder(nil, nil, leftCont, rightCont)
 
 	var botRow fyne.CanvasObject
@@ -437,17 +443,13 @@ func main() {
 	lblDateTitle := canvas.NewText("Tanggal Wafat / Geblag:", ColorTextGrey)
 	lblDateTitle.TextSize = 12
 
-	lblSelectedDate := widget.NewLabel("Belum dipilih") // Default text
+	lblSelectedDate := widget.NewLabel("Belum dipilih") 
 	lblSelectedDate.Alignment = fyne.TextAlignCenter
 	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
 
-	// Update Text Label
 	updateDateLabel := func(t time.Time) {
 		lblSelectedDate.SetText(formatIndoDate(t))
 	}
-	// Note: Kita tidak panggil updateDateLabel(calcDate) di awal, biarkan "Belum dipilih" 
-	// atau set default hari ini tapi user harus klik lagi di kalender.
-	// Jika ingin default hari ini tampil:
 	updateDateLabel(calcDate)
 
 	performCalculation := func(t time.Time) {
@@ -458,16 +460,18 @@ func main() {
 			Name   string
 			Sub    string
 			Offset int
+			Rumus  string // UPDATED: Tambah field Rumus
 		}
+		// Data Rumus berdasarkan Pakem Jawa
 		events := []Event{
-			{"Geblag", "Hari H", 0},
-			{"Nelung", "3 Hari", 2},
-			{"Mitung", "7 Hari", 6},
-			{"Matang", "40 Hari", 39},
-			{"Nyatus", "100 Hari", 99},
-			{"Pendhak I", "1 Tahun", 353},
-			{"Pendhak II", "2 Tahun", 707},
-			{"Nyewu", "1000 Hari", 999},
+			{"Geblag", "Hari H", 0, ""}, // Geblag tidak ada rumus
+			{"Nelung", "3 Hari", 2, "Rumus: Lusarlu"},
+			{"Mitung", "7 Hari", 6, "Rumus: Tusarpat"},
+			{"Matang", "40 Hari", 39, "Rumus: Masarma"},
+			{"Nyatus", "100 Hari", 99, "Rumus: Rosarji"},
+			{"Pendhak I", "1 Tahun", 353, "Rumus: Patsarpat"},
+			{"Pendhak II", "2 Tahun", 707, "Rumus: Rosarji"},
+			{"Nyewu", "1000 Hari", 999, "Rumus: Nemsarmo"},
 		}
 
 		now := time.Now()
@@ -484,7 +488,8 @@ func main() {
 			} else if diff == 0 {
 				status = 2
 			}
-			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), status, diff)
+			// Pass rumusStr ke createCard
+			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), e.Rumus, status, diff)
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
 		}
@@ -496,14 +501,9 @@ func main() {
 	btnOpenCalc.Icon = theme.CalendarIcon()
 
 	btnOpenCalc.OnTapped = func() {
-		// Pass calcDate as initial view, but user must click to select (green)
 		createCalendarPopup(myWindow.Canvas(), calcDate,
-			func(realtimeDate time.Time) {
-				// Ini callback saat user klik tanggal di grid (belum final pilih)
-				// Bisa update label real-time preview jika mau
-			},
+			func(realtimeDate time.Time) {},
 			func(finalDate time.Time) {
-				// Ini callback saat tombol "Pilih" ditekan dan valid
 				calcDate = finalDate
 				performCalculation(calcDate)
 			},
@@ -557,7 +557,8 @@ func main() {
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 		neptuStr := calculateNeptu(t)
 
-		card := createCard("Hasil Weton", neptuStr, formatIndoDate(t), formatWeton(t), 4, 0)
+		// Rumus dikosongkan ("") untuk tab Weton
+		card := createCard("Hasil Weton", neptuStr, formatIndoDate(t), formatWeton(t), "", 4, 0)
 		wetonResultBox.Add(card)
 		wetonResultBox.Refresh()
 	}
@@ -568,8 +569,7 @@ func main() {
 
 	btnOpenWeton.OnTapped = func() {
 		createCalendarPopup(myWindow.Canvas(), wetonDate,
-			func(realtimeDate time.Time) {
-			},
+			func(realtimeDate time.Time) {},
 			func(finalDate time.Time) {
 				wetonDate = finalDate
 				performWetonCheck(wetonDate)
