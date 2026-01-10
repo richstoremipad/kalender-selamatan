@@ -249,13 +249,13 @@ func (c *clickableCard) Tapped(_ *fyne.PointEvent) {
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
-	
+
 	// MODE NAVIGASI:
 	// 0 = Tampilan Tanggal
 	// 1 = Tampilan Bulan (Navigasi Tahun Original)
 	// 2 = Tampilan Tahun (Scroll List Simple)
 	currentViewMode := 0
-	
+
 	hasSelected := false
 
 	contentStack := container.NewStack()
@@ -288,9 +288,9 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			// VIEW 0: GRID TANGGAL
 			// ============================
 			titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
-			
+
 			btnHeader := widget.NewButton(titleText, func() {
-				currentViewMode = 1 
+				currentViewMode = 1
 				refreshContent()
 			})
 			// Transparan seperti header
@@ -355,7 +355,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			// ============================================
 			// VIEW 1: GRID BULAN & NAVIGASI TAHUN ORIGINAL
 			// ============================================
-			
+
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentViewMode = 0
 				refreshContent()
@@ -367,7 +367,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				currentMonth = currentMonth.AddDate(-1, 0, 0)
 				refreshContent()
 			})
-			
+
 			btnNextYear := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
 				currentMonth = currentMonth.AddDate(1, 0, 0)
 				refreshContent()
@@ -379,7 +379,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				refreshContent()
 			})
 			// Transparan / menyatu dengan background
-			btnYearNum.Importance = widget.LowImportance 
+			btnYearNum.Importance = widget.LowImportance
 
 			yearNavLayout := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, container.NewCenter(btnYearNum))
 
@@ -392,7 +392,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				}
 				btnMonth := widget.NewButton(mName, func() {
 					currentMonth = time.Date(currentMonth.Year(), time.Month(mIdx), 1, 0, 0, 0, 0, time.Local)
-					currentViewMode = 0 
+					currentViewMode = 0
 					refreshContent()
 				})
 				if time.Month(mIdx) == month {
@@ -412,26 +412,33 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			// ============================
 			// VIEW 2: SCROLL TAHUN (LIST)
 			// ============================
-			
-			btnBack := widget.NewButtonWithIcon("Kembali ke Bulan", theme.NavigateBackIcon(), func() {
+
+			// PERUBAHAN DI SINI:
+			// 1. Text button dihapus ("Kembali ke Bulan" -> "")
+			// 2. Importance menjadi DangerImportance (Merah)
+			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentViewMode = 1
 				refreshContent()
 			})
-			btnBack.Importance = widget.LowImportance
+			btnBack.Importance = widget.DangerImportance
 
 			startYear := 1900
 			endYear := 2100
 			totalYears := endYear - startYear + 1
-			
+
 			// LOGIKA SCROLL KE TENGAH
 			// Cari index tahun saat ini
 			actualIndex := year - startYear
 			// Kurangi 3 agar tahun terpilih ada di tengah list (bukan paling atas)
 			scrollIndex := actualIndex - 3
-			
+
 			// Safety check agar tidak minus
-			if scrollIndex < 0 { scrollIndex = 0 }
-			if scrollIndex >= totalYears { scrollIndex = totalYears - 1 }
+			if scrollIndex < 0 {
+				scrollIndex = 0
+			}
+			if scrollIndex >= totalYears {
+				scrollIndex = totalYears - 1
+			}
 
 			list := widget.NewList(
 				func() int {
@@ -446,48 +453,46 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					displayYear := startYear + i
 					btn := o.(*widget.Button)
 					btn.SetText(fmt.Sprintf("%d", displayYear))
-					
+
 					// Warna tombol tahun dibuat standar (Medium) agar tidak norak tapi tetap terlihat tombol
 					// Tidak ada Highlight warna khusus untuk tahun aktif
 					btn.Importance = widget.MediumImportance
-					
+
 					btn.OnTapped = func() {
 						currentMonth = time.Date(displayYear, month, 1, 0, 0, 0, 0, time.Local)
-						currentViewMode = 1 
+						currentViewMode = 1
 						refreshContent()
 					}
 				},
 			)
 
 			listContainer := container.NewStack(list)
-			
-			lblMenu := widget.NewLabel("Pilih Tahun")
-			lblMenu.Alignment = fyne.TextAlignCenter
-			lblMenu.TextStyle = fyne.TextStyle{Bold: true}
-			
-			topRow := container.NewBorder(nil, nil, btnBack, nil, lblMenu)
-			
+
+			// PERUBAHAN DI SINI:
+			// Label "Pilih Tahun" dihapus dari layout
+			topRow := container.NewBorder(nil, nil, btnBack, nil, nil)
+
 			yearView := container.NewBorder(
 				container.NewPadded(topRow),
 				nil, nil, nil,
 				listContainer,
 			)
-			
+
 			contentStack.Objects = []fyne.CanvasObject{yearView}
-			
+
 			// FIX: Gunakan Goroutine + Sleep untuk memastikan Layout siap sebelum Scroll
 			go func() {
 				time.Sleep(100 * time.Millisecond) // Jeda 100ms
 				list.ScrollTo(widget.ListItemID(scrollIndex))
 			}()
 		}
-		
+
 		contentStack.Refresh()
 	}
 
 	btnHitung := widget.NewButton("Pilih", func() {
 		if currentViewMode != 0 {
-			showToast() 
+			showToast()
 			return
 		}
 
@@ -600,11 +605,11 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 		return newClickableCard(visualCard, func() {
 			lblDesc := widget.NewLabel(descStr)
 			lblDesc.Wrapping = fyne.TextWrapWord
-			
+
 			lblHeader := widget.NewLabel("Penjelasan Fase: " + title)
 			lblHeader.Alignment = fyne.TextAlignCenter
 			lblHeader.TextStyle = fyne.TextStyle{Bold: true}
-			
+
 			var popup *widget.PopUp
 			btnClose := widget.NewButton("Tutup", func() {
 				if popup != nil {
@@ -617,18 +622,18 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 			scrollContainer.SetMinSize(fyne.NewSize(0, 300))
 
 			contentBox := container.NewBorder(
-				lblHeader, 
-				container.NewPadded(btnClose), 
-				nil, nil, 
+				lblHeader,
+				container.NewPadded(btnClose),
+				nil, nil,
 				scrollContainer,
 			)
 
 			bgRect := canvas.NewRectangle(ColorCardBg)
 			bgRect.CornerRadius = 12
 			bgRect.SetMinSize(fyne.NewSize(300, 400))
-			
+
 			finalPopupContent := container.NewStack(bgRect, container.NewPadded(contentBox))
-			
+
 			popup = widget.NewModalPopUp(container.NewCenter(finalPopupContent), parentCanvas)
 			popup.Resize(fyne.NewSize(320, 450))
 			popup.Show()
@@ -852,7 +857,7 @@ func main() {
 		&widget.TextSegment{
 			Text: "lusarlu ",
 			Style: widget.RichTextStyle{
-				ColorName: "red", 
+				ColorName: "red",
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
@@ -867,7 +872,7 @@ func main() {
 		&widget.TextSegment{
 			Text: "nemsarmo ",
 			Style: widget.RichTextStyle{
-				ColorName: "red", 
+				ColorName: "red",
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
@@ -930,7 +935,7 @@ func main() {
 	tabs.SetTabLocation(container.TabLocationTop)
 
 	tabs.OnSelected = func(i *container.TabItem) {
-		noteContainer.Objects = nil 
+		noteContainer.Objects = nil
 		if i.Text == "Hitung Selamatan" {
 			noteContainer.Add(richNoteSelamatan)
 		} else {
