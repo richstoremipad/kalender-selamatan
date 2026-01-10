@@ -35,6 +35,12 @@ var (
 	Pasaran   = []string{"Legi", "Pahing", "Pon", "Wage", "Kliwon"}
 	BulanIndo = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
 	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
+	
+	// NILAI NEPTU
+	// Minggu=5, Senin=4, Selasa=3, Rabu=7, Kamis=8, Jumat=6, Sabtu=9
+	NilaiHari = []int{5, 4, 3, 7, 8, 6, 9}
+	// Legi=5, Pahing=9, Pon=7, Wage=4, Kliwon=8
+	NilaiPasaran = []int{5, 9, 7, 4, 8}
 )
 
 func dateToJDN(t time.Time) int {
@@ -73,6 +79,19 @@ func formatWeton(t time.Time) string {
 
 func formatIndoDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), BulanIndo[t.Month()], t.Year())
+}
+
+// FUNGSI BARU: MENGHITUNG TOTAL NEPTU
+func calculateNeptu(t time.Time) string {
+	idxHari := int(t.Weekday()) // 0=Minggu, 6=Sabtu
+	valHari := NilaiHari[idxHari]
+
+	jd := dateToJDN(t)
+	idxPasaran := jd % 5
+	valPasaran := NilaiPasaran[idxPasaran]
+
+	total := valHari + valPasaran
+	return fmt.Sprintf("Jumlah Neptu: %d", total)
 }
 
 // ==========================================
@@ -364,7 +383,7 @@ func main() {
 	headerContainer := container.NewVBox(headerStack)
 
 	// =======================================================
-	// BAGIAN 1: TAB SELAMATAN (KODE ORIGINAL DI PINDAH SINI)
+	// BAGIAN 1: TAB SELAMATAN
 	// =======================================================
 
 	// Area Hasil
@@ -465,7 +484,7 @@ func main() {
 	)
 
 	// =======================================================
-	// BAGIAN 2: TAB CEK WETON (FITUR BARU)
+	// BAGIAN 2: TAB CEK WETON
 	// =======================================================
 
 	// Area Hasil Weton
@@ -492,13 +511,11 @@ func main() {
 
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 
-		// Gunakan createCard dengan statusType 0 (agar tidak ada badge 'lewat'/'hari ini')
-		// Atau gunakan statusType 2 jika ingin di highlight
-		card := createCard("Hasil Weton", "Data Kelahiran", formatIndoDate(t), formatWeton(t), 4, 0)
-		
-		// Info tambahan manual
-		infoText := widget.NewLabel("Weton: " + formatWeton(t))
-		infoText.Alignment = fyne.TextAlignCenter
+		// Hitung Neptu
+		neptuStr := calculateNeptu(t)
+
+		// Tampilkan Card: "Data Kelahiran" diganti dengan neptuStr
+		card := createCard("Hasil Weton", neptuStr, formatIndoDate(t), formatWeton(t), 4, 0)
 		
 		wetonResultBox.Add(card)
 		wetonResultBox.Refresh()
