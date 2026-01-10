@@ -24,7 +24,7 @@ import (
 // ==========================================
 
 // Ganti URL ini dengan URL raw file JSON di server Anda
-const UpdateCheckURL = "https://example.com/version.json" 
+const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
