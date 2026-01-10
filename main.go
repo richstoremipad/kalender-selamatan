@@ -31,9 +31,11 @@ var bgPngData []byte
 // ==========================================
 
 var DeskripsiFase = map[string]string{
-	"Geblag": `Hari Pertama (Malam Pertama di Alam Kubur)
-
-Pada hari pertama, jasad mulai mengalami perubahan fisik yang nyata. Ruh digambarkan masih sangat dekat dengan jasadnya dan merasa kaget dengan suasana kubur yang gelap dan sempit.
+	"Geblag": `Rumus: 
+	Jisarji (dino ke siji pasaran ke siji).
+	
+	Kajian:
+	Pada hari pertama, jasad mulai mengalami perubahan fisik yang nyata. Ruh digambarkan masih sangat dekat dengan jasadnya dan merasa kaget dengan suasana kubur yang gelap dan sempit.
 
 Kondisi Jasad:
 Bagian perut mulai membuncit karena gas mulai terbentuk di dalam usus. Warna kulit yang tadinya cerah berubah menjadi pucat kebiruan atau hijau kehitaman, terutama di area perut dan kemaluan.
@@ -41,9 +43,10 @@ Bagian perut mulai membuncit karena gas mulai terbentuk di dalam usus. Warna kul
 Hikmah:
 Inilah alasan mengapa keluarga disunnahkan memberikan sedekah pada malam pertama untuk meringankan beban "kagetnya" ruh di alam baru.`,
 
-	"Nelung": `Hari Ketiga
-
-Hari ketiga adalah fase di mana rupa manusia mulai hilang secara perlahan.
+	"Nelung": `Rumus:
+	Lusarlu (Dino ke telu pasaran ke telu).
+	
+	kajian: Hari ketiga adalah fase di mana rupa manusia mulai hilang secara perlahan.
 
 Kondisi Jasad:
 Cairan mulai keluar dari lubang-lubang tubuh (hidung, mulut, dan telinga). Bau busuk mulai keluar dengan sangat menyengat karena bakteri pembusuk telah menyebar ke seluruh organ dalam.
@@ -51,8 +54,10 @@ Cairan mulai keluar dari lubang-lubang tubuh (hidung, mulut, dan telinga). Bau b
 Kondisi Organ:
 Lidah mulai membengkak dan sering kali terjepit oleh gigi karena ruang di dalam mulut menyempit akibat gas. Mata mulai melunak dan tampak agak menonjol.`,
 
-	"Mitung": `Hari Ketujuh
+	"Mitung": `Rumus:
+	Tusarro (Dino ke pitu pasaran ke pitu).
 
+Kajian:
 Hari ketujuh merupakan fase transisi besar dalam proses penghancuran organ dalam.
 
 Kondisi Jasad:
@@ -61,8 +66,10 @@ Perut yang tadinya membuncit akan pecah karena tekanan gas dan aktivitas bakteri
 Sisi Spiritual:
 Berdasarkan keterangan dalam kitab Al-Hawi lil Fatawi (Imam Suyuthi) yang sering disandingkan dengan Daqa'iqul Akhbar, tujuh hari pertama adalah masa Fitnah Kubur (ujian dan pertanyaan malaikat). Oleh karena itu, sedekah makanan pada hari ke-7 sangat ditekankan.`,
 
-	"Matang": `Hari Ke-40
-
+	"Matang": `Rumus:
+	Masarma (Dino ke limo pasaran ke limo).
+	
+Kajian:
 Pada hari ke-40, jasad sudah tidak lagi menyerupai sosok manusia yang dikenal semasa hidup.
 
 Kondisi Jasad:
@@ -74,8 +81,10 @@ Kulit wajah sudah hancur sepenuhnya, mata sudah hilang dari kelopaknya, dan ramb
 Tradisi:
 Dipercaya pada hari ke-40, proses "pembersihan" sisa daging sedang terjadi secara masif, sehingga doa dikirimkan agar ruh diberikan ketenangan dalam melihat jasadnya yang hancur.`,
 
-	"Nyatus": `Hari Ke-100
+	"Nyatus": `Rumus:
+	Rosarma (Dino ke loro pasaran ke limo).
 
+Kajian:
 Memasuki hari ke-100, proses pembusukan daging sudah hampir selesai secara total.
 
 Kondisi Jasad:
@@ -84,9 +93,10 @@ Tubuh kini didominasi oleh rangka. Hanya menyisakan sedikit jaringan otot atau k
 Bau:
 Bau busuk yang menyengat sudah mulai berkurang karena sumber pembusukan (daging dan organ dalam) sudah menyatu dengan tanah.`,
 
-	"Pendhak I": `Pendhak Siji (1 Tahun)
+	"Pendhak I": `Rumus:
+	Patsarpat (Dino ke papat pasaran ke papat).
 
-Istilah "Pendhak" adalah tradisi lokal Nusantara untuk menyebut Haul atau peringatan tahunan.
+Kajian: Istilah "Pendhak" adalah tradisi lokal Nusantara untuk menyebut Haul atau peringatan tahunan.
 
 Kondisi Jasad:
 Tulang-belulang mulai menjadi kering. Sumsum di dalam tulang sudah habis. Sendi-sendi yang menghubungkan tulang satu dengan yang lain mulai terlepas.
@@ -94,8 +104,10 @@ Tulang-belulang mulai menjadi kering. Sumsum di dalam tulang sudah habis. Sendi-
 Kondisi Tengkorak:
 Rahang bawah biasanya sudah terlepas dari tengkorak. Tubuh benar-benar sudah menjadi serpihan tulang yang terpisah-pisah.`,
 
-	"Pendhak II": `Pendhak Loro (2 Tahun)
+	"Pendhak II": `Rumus:
+	Rosarpat (Dino ke siji pasaran ke telu).
 
+Kajian:
 Memasuki tahun kedua, proses dekomposisi tulang berlanjut.
 
 Kondisi Jasad:
@@ -104,8 +116,10 @@ Tulang-belulang semakin kering dan mulai terurai oleh tanah. Sendi-sendi utama s
 Makna:
 Peringatan ini menjadi penanda bahwa hubungan fisik almarhum dengan dunia semakin pudar, dan yang tersisa hanyalah doa dari anak cucu serta amal jariyahnya.`,
 
-	"Nyewu": `Hari Ke-1000 (Nyewu)
-
+	"Nyewu": `Rumus:
+	Nemsarma (Dino ke enem pasaran ke limo).
+	
+Kajian:
 Ini adalah fase terakhir dalam proses dekomposisi jasad manusia secara alami.
 
 Kondisi Jasad:
@@ -481,7 +495,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		contentStack.Refresh()
 	}
 
-	btnHitung := widget.NewButton("Pilih", func() {
+	btnHitung := widget.NewButton("Hitung", func() {
 		if currentViewMode != 0 {
 			showToast()
 			return
@@ -696,14 +710,14 @@ func main() {
 			Rumus  string
 		}
 		events := []Event{
-			{"Geblag", "Hari H", 0, ""},
-			{"Nelung", "3 Hari", 2, "Rumus: Lusarlu"},
-			{"Mitung", "7 Hari", 6, "Rumus: Tusarpat"},
-			{"Matang", "40 Hari", 39, "Rumus: Masarma"},
-			{"Nyatus", "100 Hari", 99, "Rumus: Rosarji"},
-			{"Pendhak I", "1 Tahun", 353, "Rumus: Patsarpat"},
-			{"Pendhak II", "2 Tahun", 707, "Rumus: Rosarji"},
-			{"Nyewu", "1000 Hari", 999, "Rumus: Nemsarmo"},
+			{"Geblag", "Hari H", 0, "Jisarji"},
+			{"Nelung", "3 Hari", 2, "Lusarlu"},
+			{"Mitung", "7 Hari", 6, "Tusarro"},
+			{"Matang", "40 Hari", 39, "Masarma"},
+			{"Nyatus", "100 Hari", 99, "Rosarma"},
+			{"Pendhak I", "1 Tahun", 353, "Patsarpat"},
+			{"Pendhak II", "2 Tahun", 707, "Rosarpat"},
+			{"Nyewu", "1000 Hari", 999, "Nemsarmo"},
 		}
 
 		now := time.Now()
@@ -728,7 +742,7 @@ func main() {
 		resultBox.Refresh()
 	}
 
-	btnOpenCalc := widget.NewButton("Pilih Tanggal & Hitung", nil)
+	btnOpenCalc := widget.NewButton("Hitung Selamatan", nil)
 	btnOpenCalc.Importance = widget.HighImportance
 	btnOpenCalc.Icon = theme.CalendarIcon()
 
@@ -880,7 +894,7 @@ func main() {
 			},
 		},
 		&widget.TextSegment{
-			Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.",
+			Text: ". Silahkan klik pada hasil hari/pasaran untuk melihat rumus dan filosofinya.",
 			Style: widget.RichTextStyle{
 				Inline:    true,
 				TextStyle: fyne.TextStyle{Italic: true},
@@ -903,7 +917,7 @@ func main() {
 			Style: widget.RichTextStyle{ColorName: "primary", Inline: true, TextStyle: fyne.TextStyle{Italic: true, Bold: true}},
 		},
 		&widget.TextSegment{
-			Text: "sesuai pakem Primbon Jawa. (Minggu=5, Senin=4, Selasa=3, Rabu=7, Kamis=8, Jumat=6, Sabtu=9) & (Legi=5, Pahing=9, Pon=7, Wage=4, Kliwon=8).",
+			Text: "sesuai pakem Primbon Jawa.",
 			Style: widget.RichTextStyle{Inline: true, TextStyle: fyne.TextStyle{Italic: true}},
 		},
 	)
