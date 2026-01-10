@@ -24,10 +24,10 @@ import (
 // KONFIGURASI VERSI APLIKASI
 // ==========================================
 
-// PENTING: Ganti dengan URL file JSON di hosting Anda
+// GANTI URL INI DENGAN URL ASLI ANDA
 const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
 
-// PENTING: Ganti dengan versi aplikasi saat ini
+// VERSI APLIKASI SAAT INI
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
@@ -647,51 +647,71 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // 7. MAIN APP
 // ==========================================
 
-// --- UPDATE CHECKER LOGIC (PRODUCTION READY) ---
+// --- UPDATE CHECKER LOGIC (MAXIMUM ANTI-CACHE) ---
 func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 	go func() {
-		// 1. Jeda 3 detik agar UI utama tampil sempurna
+		// Logika: Tunggu aplikasi tampil (3 detik), lalu cek.
 		time.Sleep(3 * time.Second)
+
+		fmt.Println("--- Memulai Pengecekan Update ---")
 
 		var updateInfo UpdateData
 
-		// 2. Teknik Cache Busting (Menghindari Cache Server)
-		// Tambahkan timestamp di URL agar dianggap request baru
+		// 1. URL Unik (Cache Busting)
+		// Menambahkan parameter ?t=123456789 agar server menganggap ini request baru
 		uniqueURL := fmt.Sprintf("%s?t=%d", UpdateCheckURL, time.Now().UnixNano())
+		fmt.Println("Target URL:", uniqueURL)
 
-		// Buat Request dengan Header khusus
+		// 2. HTTP Request dengan Header Agresif
 		req, err := http.NewRequest("GET", uniqueURL, nil)
 		if err != nil {
+			fmt.Println("Gagal membuat request:", err)
 			return
 		}
-		// Paksa header agar tidak mengambil dari cache
-		req.Header.Set("Cache-Control", "no-cache")
+		// Header standar untuk memaksa server memberikan data terbaru
+		req.Header.Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		req.Header.Set("Pragma", "no-cache")
+		req.Header.Set("Expires", "0")
 
-		// 3. Eksekusi Request
-		client := &http.Client{Timeout: 5 * time.Second}
+		// 3. Transport Layer (Mematikan Cache Internal Go)
+		tr := &http.Transport{
+			DisableKeepAlives: true, // Jangan pakai koneksi lama
+		}
+		client := &http.Client{
+			Transport: tr,
+			Timeout:   10 * time.Second,
+		}
+
 		resp, err := client.Do(req)
 		if err != nil {
-			return // Gagal koneksi / Offline
+			fmt.Println("Gagal koneksi (Offline?):", err)
+			return 
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
+			fmt.Println("Server merespon error:", resp.StatusCode)
 			return
 		}
 
 		if err := json.NewDecoder(resp.Body).Decode(&updateInfo); err != nil {
+			fmt.Println("Gagal decode JSON:", err)
 			return
 		}
 
+		fmt.Printf("Data Server: %+v\n", updateInfo)
+		fmt.Printf("Versi App: %s, Versi Server: %s\n", CurrentAppVersion, updateInfo.Version)
+
 		// 4. Bandingkan Versi
 		if updateInfo.Version == CurrentAppVersion {
-			return // Versi sama, tidak perlu popup
+			fmt.Println("Versi sudah paling baru. Tidak menampilkan popup.")
+			return 
 		}
 
-		// 5. TAMPILKAN POPUP JIKA VERSI BERBEDA
+		fmt.Println("Update ditemukan! Menampilkan Popup...")
+
+		// 5. TAMPILKAN POPUP
 		
-		// Header & Pesan
 		lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
 		lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 		lblTitle.TextSize = 16
@@ -706,11 +726,11 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 		msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
 		msgText.Wrapping = fyne.TextWrapWord
 
-		// Tombol Keluar (KIRI) - AMAN (os.Exit)
+		// Tombol Keluar (KIRI) - AMAN DENGAN OS.EXIT
 		btnExit := widget.NewButton("Keluar", func() {
-			os.Exit(0) // Matikan app total
+			os.Exit(0) 
 		})
-		btnExit.Importance = widget.DangerImportance // Merah
+		btnExit.Importance = widget.DangerImportance 
 
 		// Tombol Update (KANAN)
 		btnUpdate := widget.NewButton("Update", func() {
@@ -719,16 +739,15 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 				myApp.OpenURL(u)
 			}
 		})
-		btnUpdate.Importance = widget.HighImportance // Biru
+		btnUpdate.Importance = widget.HighImportance 
 
 		// Layout Tombol: [Keluar] <--- SPASI ---> [Update]
 		buttonRow := container.NewHBox(
 			btnExit,
-			layout.NewSpacer(), // Spasi Longgar
+			layout.NewSpacer(), 
 			btnUpdate,
 		)
 
-		// Susunan Konten
 		mainContent := container.NewVBox(
 			lblTitle,
 			container.NewCenter(badgeVer),
@@ -737,11 +756,11 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 		)
 
 		finalLayout := container.NewBorder(
-			nil,                          // Top
-			container.NewPadded(buttonRow), // Bottom (Tombol)
-			nil,                          // Left
-			nil,                          // Right
-			container.NewPadded(mainContent), // Center (Konten)
+			nil,                         
+			container.NewPadded(buttonRow), 
+			nil,                          
+			nil,                         
+			container.NewPadded(mainContent),
 		)
 
 		bgRect := canvas.NewRectangle(ColorCardBg)
@@ -753,10 +772,6 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			container.NewPadded(finalLayout),
 		)
 
-		// Tampilkan Popup (Tanpa blokir UI utama karena ini dalam goroutine)
-		// Gunakan refresh/show di main thread jika perlu, tapi widget creation Fyne aman diakses.
-		// Untuk memastikan thread safety UI, biasanya disarankan container refresh,
-		// tapi ModalPopUp Show() biasanya aman.
 		popup := widget.NewModalPopUp(container.NewCenter(popupContent), myCanvas)
 		popup.Resize(fyne.NewSize(320, 300))
 		popup.Show()
