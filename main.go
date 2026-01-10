@@ -8,7 +8,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
-	"os" // <--- PENTING: Tambahkan import ini
+	"os"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -24,7 +24,10 @@ import (
 // KONFIGURASI VERSI APLIKASI
 // ==========================================
 
+// PENTING: Ganti dengan URL file JSON di hosting Anda
 const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
+
+// PENTING: Ganti dengan versi aplikasi saat ini
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
@@ -644,15 +647,32 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // 7. MAIN APP
 // ==========================================
 
-// --- UPDATE CHECKER LOGIC (ANTI-CRASH FIXED) ---
+// --- UPDATE CHECKER LOGIC (PRODUCTION READY) ---
 func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 	go func() {
+		// 1. Jeda 3 detik agar UI utama tampil sempurna
 		time.Sleep(3 * time.Second)
 
-		client := http.Client{Timeout: 5 * time.Second}
-		resp, err := client.Get(UpdateCheckURL)
+		var updateInfo UpdateData
+
+		// 2. Teknik Cache Busting (Menghindari Cache Server)
+		// Tambahkan timestamp di URL agar dianggap request baru
+		uniqueURL := fmt.Sprintf("%s?t=%d", UpdateCheckURL, time.Now().UnixNano())
+
+		// Buat Request dengan Header khusus
+		req, err := http.NewRequest("GET", uniqueURL, nil)
 		if err != nil {
 			return
+		}
+		// Paksa header agar tidak mengambil dari cache
+		req.Header.Set("Cache-Control", "no-cache")
+		req.Header.Set("Pragma", "no-cache")
+
+		// 3. Eksekusi Request
+		client := &http.Client{Timeout: 5 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			return // Gagal koneksi / Offline
 		}
 		defer resp.Body.Close()
 
@@ -660,77 +680,87 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			return
 		}
 
-		var updateInfo UpdateData
 		if err := json.NewDecoder(resp.Body).Decode(&updateInfo); err != nil {
 			return
 		}
 
-		if updateInfo.Version != CurrentAppVersion {
-
-			lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
-			lblTitle.TextStyle = fyne.TextStyle{Bold: true}
-			lblTitle.TextSize = 16
-			lblTitle.Alignment = fyne.TextAlignCenter
-
-			lblVer := canvas.NewText("Versi Baru: "+updateInfo.Version, ColorTextWhite)
-			lblVer.TextSize = 12
-			badgeBg := canvas.NewRectangle(ColorBadgeGreen)
-			badgeBg.CornerRadius = 8
-			badgeVer := container.NewStack(badgeBg, container.NewPadded(lblVer))
-
-			msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
-			msgText.Wrapping = fyne.TextWrapWord
-
-			// --- FIX TOMBOL KELUAR (ANTI-CRASH) ---
-			btnExit := widget.NewButton("Keluar", func() {
-				// Gunakan os.Exit(0) agar aplikasi langsung mati tanpa panic
-				os.Exit(0)
-			})
-			btnExit.Importance = widget.DangerImportance 
-
-			btnUpdate := widget.NewButton("Update", func() {
-				u, err := url.Parse(updateInfo.DownloadURL)
-				if err == nil {
-					myApp.OpenURL(u)
-				}
-			})
-			btnUpdate.Importance = widget.HighImportance 
-
-			// LAYOUT TOMBOL DIBAWAH
-			buttonRow := container.NewHBox(
-				btnExit,
-				layout.NewSpacer(), // Space longgar di tengah
-				btnUpdate,
-			)
-
-			mainContent := container.NewVBox(
-				lblTitle,
-				container.NewCenter(badgeVer),
-				widget.NewSeparator(),
-				msgText,
-			)
-
-			finalLayout := container.NewBorder(
-				nil,                          
-				container.NewPadded(buttonRow), // Tombol di bawah
-				nil,                         
-				nil,                          
-				container.NewPadded(mainContent),
-			)
-
-			bgRect := canvas.NewRectangle(ColorCardBg)
-			bgRect.CornerRadius = 12
-			bgRect.SetMinSize(fyne.NewSize(280, 250))
-
-			popupContent := container.NewStack(
-				bgRect,
-				container.NewPadded(finalLayout),
-			)
-
-			popup := widget.NewModalPopUp(container.NewCenter(popupContent), myCanvas)
-			popup.Resize(fyne.NewSize(320, 300))
-			popup.Show()
+		// 4. Bandingkan Versi
+		if updateInfo.Version == CurrentAppVersion {
+			return // Versi sama, tidak perlu popup
 		}
+
+		// 5. TAMPILKAN POPUP JIKA VERSI BERBEDA
+		
+		// Header & Pesan
+		lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
+		lblTitle.TextStyle = fyne.TextStyle{Bold: true}
+		lblTitle.TextSize = 16
+		lblTitle.Alignment = fyne.TextAlignCenter
+
+		lblVer := canvas.NewText("Versi Baru: "+updateInfo.Version, ColorTextWhite)
+		lblVer.TextSize = 12
+		badgeBg := canvas.NewRectangle(ColorBadgeGreen)
+		badgeBg.CornerRadius = 8
+		badgeVer := container.NewStack(badgeBg, container.NewPadded(lblVer))
+
+		msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
+		msgText.Wrapping = fyne.TextWrapWord
+
+		// Tombol Keluar (KIRI) - AMAN (os.Exit)
+		btnExit := widget.NewButton("Keluar", func() {
+			os.Exit(0) // Matikan app total
+		})
+		btnExit.Importance = widget.DangerImportance // Merah
+
+		// Tombol Update (KANAN)
+		btnUpdate := widget.NewButton("Update", func() {
+			u, err := url.Parse(updateInfo.DownloadURL)
+			if err == nil {
+				myApp.OpenURL(u)
+			}
+		})
+		btnUpdate.Importance = widget.HighImportance // Biru
+
+		// Layout Tombol: [Keluar] <--- SPASI ---> [Update]
+		buttonRow := container.NewHBox(
+			btnExit,
+			layout.NewSpacer(), // Spasi Longgar
+			btnUpdate,
+		)
+
+		// Susunan Konten
+		mainContent := container.NewVBox(
+			lblTitle,
+			container.NewCenter(badgeVer),
+			widget.NewSeparator(),
+			msgText,
+		)
+
+		finalLayout := container.NewBorder(
+			nil,                          // Top
+			container.NewPadded(buttonRow), // Bottom (Tombol)
+			nil,                          // Left
+			nil,                          // Right
+			container.NewPadded(mainContent), // Center (Konten)
+		)
+
+		bgRect := canvas.NewRectangle(ColorCardBg)
+		bgRect.CornerRadius = 12
+		bgRect.SetMinSize(fyne.NewSize(280, 250))
+
+		popupContent := container.NewStack(
+			bgRect,
+			container.NewPadded(finalLayout),
+		)
+
+		// Tampilkan Popup (Tanpa blokir UI utama karena ini dalam goroutine)
+		// Gunakan refresh/show di main thread jika perlu, tapi widget creation Fyne aman diakses.
+		// Untuk memastikan thread safety UI, biasanya disarankan container refresh,
+		// tapi ModalPopUp Show() biasanya aman.
+		popup := widget.NewModalPopUp(container.NewCenter(popupContent), myCanvas)
+		popup.Resize(fyne.NewSize(320, 300))
+		popup.Show()
+
 	}()
 }
 
