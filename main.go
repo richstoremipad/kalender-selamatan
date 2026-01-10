@@ -32,10 +32,10 @@ var bgPngData []byte
 
 var DeskripsiFase = map[string]string{
 	"Geblag": `Rumus: 
-	Jisarji (dino ke siji pasaran ke siji).
+Jisarji (dino ke siji pasaran ke siji).
 	
-	Kajian:
-	Pada hari pertama, jasad mulai mengalami perubahan fisik yang nyata. Ruh digambarkan masih sangat dekat dengan jasadnya dan merasa kaget dengan suasana kubur yang gelap dan sempit.
+Kajian:
+Pada hari pertama, jasad mulai mengalami perubahan fisik yang nyata. Ruh digambarkan masih sangat dekat dengan jasadnya dan merasa kaget dengan suasana kubur yang gelap dan sempit.
 
 Kondisi Jasad:
 Bagian perut mulai membuncit karena gas mulai terbentuk di dalam usus. Warna kulit yang tadinya cerah berubah menjadi pucat kebiruan atau hijau kehitaman, terutama di area perut dan kemaluan.
@@ -44,9 +44,10 @@ Hikmah:
 Inilah alasan mengapa keluarga disunnahkan memberikan sedekah pada malam pertama untuk meringankan beban "kagetnya" ruh di alam baru.`,
 
 	"Nelung": `Rumus:
-	Lusarlu (Dino ke telu pasaran ke telu).
+Lusarlu (Dino ke telu pasaran ke telu).
 	
-	kajian: Hari ketiga adalah fase di mana rupa manusia mulai hilang secara perlahan.
+Kajian: 
+Hari ketiga adalah fase di mana rupa manusia mulai hilang secara perlahan.
 
 Kondisi Jasad:
 Cairan mulai keluar dari lubang-lubang tubuh (hidung, mulut, dan telinga). Bau busuk mulai keluar dengan sangat menyengat karena bakteri pembusuk telah menyebar ke seluruh organ dalam.
@@ -55,7 +56,7 @@ Kondisi Organ:
 Lidah mulai membengkak dan sering kali terjepit oleh gigi karena ruang di dalam mulut menyempit akibat gas. Mata mulai melunak dan tampak agak menonjol.`,
 
 	"Mitung": `Rumus:
-	Tusarro (Dino ke pitu pasaran ke pitu).
+Tusarro (Dino ke pitu pasaran ke pitu).
 
 Kajian:
 Hari ketujuh merupakan fase transisi besar dalam proses penghancuran organ dalam.
@@ -67,7 +68,7 @@ Sisi Spiritual:
 Berdasarkan keterangan dalam kitab Al-Hawi lil Fatawi (Imam Suyuthi) yang sering disandingkan dengan Daqa'iqul Akhbar, tujuh hari pertama adalah masa Fitnah Kubur (ujian dan pertanyaan malaikat). Oleh karena itu, sedekah makanan pada hari ke-7 sangat ditekankan.`,
 
 	"Matang": `Rumus:
-	Masarma (Dino ke limo pasaran ke limo).
+Masarma (Dino ke limo pasaran ke limo).
 	
 Kajian:
 Pada hari ke-40, jasad sudah tidak lagi menyerupai sosok manusia yang dikenal semasa hidup.
@@ -82,7 +83,7 @@ Tradisi:
 Dipercaya pada hari ke-40, proses "pembersihan" sisa daging sedang terjadi secara masif, sehingga doa dikirimkan agar ruh diberikan ketenangan dalam melihat jasadnya yang hancur.`,
 
 	"Nyatus": `Rumus:
-	Rosarma (Dino ke loro pasaran ke limo).
+Rosarma (Dino ke loro pasaran ke limo).
 
 Kajian:
 Memasuki hari ke-100, proses pembusukan daging sudah hampir selesai secara total.
@@ -94,9 +95,10 @@ Bau:
 Bau busuk yang menyengat sudah mulai berkurang karena sumber pembusukan (daging dan organ dalam) sudah menyatu dengan tanah.`,
 
 	"Pendhak I": `Rumus:
-	Patsarpat (Dino ke papat pasaran ke papat).
+Patsarpat (Dino ke papat pasaran ke papat).
 
-Kajian: Istilah "Pendhak" adalah tradisi lokal Nusantara untuk menyebut Haul atau peringatan tahunan.
+Kajian: 
+Istilah "Pendhak" adalah tradisi lokal Nusantara untuk menyebut Haul atau peringatan tahunan.
 
 Kondisi Jasad:
 Tulang-belulang mulai menjadi kering. Sumsum di dalam tulang sudah habis. Sendi-sendi yang menghubungkan tulang satu dengan yang lain mulai terlepas.
@@ -105,7 +107,7 @@ Kondisi Tengkorak:
 Rahang bawah biasanya sudah terlepas dari tengkorak. Tubuh benar-benar sudah menjadi serpihan tulang yang terpisah-pisah.`,
 
 	"Pendhak II": `Rumus:
-	Rosarpat (Dino ke siji pasaran ke telu).
+Rosarpat (Dino ke siji pasaran ke telu).
 
 Kajian:
 Memasuki tahun kedua, proses dekomposisi tulang berlanjut.
@@ -117,7 +119,7 @@ Makna:
 Peringatan ini menjadi penanda bahwa hubungan fisik almarhum dengan dunia semakin pudar, dan yang tersisa hanyalah doa dari anak cucu serta amal jariyahnya.`,
 
 	"Nyewu": `Rumus:
-	Nemsarma (Dino ke enem pasaran ke limo).
+Nemsarma (Dino ke enem pasaran ke limo).
 	
 Kajian:
 Ini adalah fase terakhir dalam proses dekomposisi jasad manusia secara alami.
