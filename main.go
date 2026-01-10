@@ -465,13 +465,13 @@ func main() {
 		// Data Rumus berdasarkan Pakem Jawa
 		events := []Event{
 			{"Geblag", "Hari H", 0, ""}, // Geblag tidak ada rumus
-			{"Nelung", "3 Hari", 2, "Rumus: Lusarlu"},
-			{"Mitung", "7 Hari", 6, "Rumus: Tusarpat"},
-			{"Matang", "40 Hari", 39, "Rumus: Masarma"},
-			{"Nyatus", "100 Hari", 99, "Rumus: Rosarji"},
-			{"Pendhak I", "1 Tahun", 353, "Rumus: Patsarpat"},
-			{"Pendhak II", "2 Tahun", 707, "Rumus: Rosarji"},
-			{"Nyewu", "1000 Hari", 999, "Rumus: Nemsarmo"},
+			{"Nelung", "3 Hari", 2, "Lusarlu"},
+			{"Mitung", "7 Hari", 6, "Tusarro"},
+			{"Matang", "40 Hari", 39, "Masarma"},
+			{"Nyatus", "100 Hari", 99, "Rosarma"},
+			{"Pendhak I", "1 Tahun", 353, "Patsarpat"},
+			{"Pendhak II", "2 Tahun", 707, "Rosarpat"},
+			{"Nyewu", "1000 Hari", 999, "Nemsarmo"},
 		}
 
 		now := time.Now()
