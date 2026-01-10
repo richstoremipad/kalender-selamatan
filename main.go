@@ -341,6 +341,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					selectedDate = dateVal
 					hasSelected = true
 					refreshContent()
+					// CALLBACK REALTIME DIPANGGIL DI SINI
 					if onDateChanged != nil {
 						onDateChanged(selectedDate)
 					}
@@ -413,9 +414,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			// VIEW 2: SCROLL TAHUN (LIST)
 			// ============================
 
-			// PERUBAHAN DI SINI:
-			// 1. Text button dihapus ("Kembali ke Bulan" -> "")
-			// 2. Importance menjadi DangerImportance (Merah)
+			// PERUBAHAN 1: Hapus teks, ganti warna jadi MERAH (Danger)
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentViewMode = 1
 				refreshContent()
@@ -427,12 +426,9 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			totalYears := endYear - startYear + 1
 
 			// LOGIKA SCROLL KE TENGAH
-			// Cari index tahun saat ini
 			actualIndex := year - startYear
-			// Kurangi 3 agar tahun terpilih ada di tengah list (bukan paling atas)
 			scrollIndex := actualIndex - 3
 
-			// Safety check agar tidak minus
 			if scrollIndex < 0 {
 				scrollIndex = 0
 			}
@@ -453,9 +449,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					displayYear := startYear + i
 					btn := o.(*widget.Button)
 					btn.SetText(fmt.Sprintf("%d", displayYear))
-
-					// Warna tombol tahun dibuat standar (Medium) agar tidak norak tapi tetap terlihat tombol
-					// Tidak ada Highlight warna khusus untuk tahun aktif
 					btn.Importance = widget.MediumImportance
 
 					btn.OnTapped = func() {
@@ -468,8 +461,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 			listContainer := container.NewStack(list)
 
-			// PERUBAHAN DI SINI:
-			// Label "Pilih Tahun" dihapus dari layout
+			// PERUBAHAN 2: Hapus label "Pilih Tahun"
 			topRow := container.NewBorder(nil, nil, btnBack, nil, nil)
 
 			yearView := container.NewBorder(
@@ -480,9 +472,8 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 			contentStack.Objects = []fyne.CanvasObject{yearView}
 
-			// FIX: Gunakan Goroutine + Sleep untuk memastikan Layout siap sebelum Scroll
 			go func() {
-				time.Sleep(100 * time.Millisecond) // Jeda 100ms
+				time.Sleep(100 * time.Millisecond)
 				list.ScrollTo(widget.ListItemID(scrollIndex))
 			}()
 		}
@@ -688,6 +679,7 @@ func main() {
 	lblSelectedDate.Alignment = fyne.TextAlignCenter
 	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
 
+	// Helper update text
 	updateDateLabel := func(t time.Time) {
 		lblSelectedDate.SetText(formatIndoDate(t))
 	}
@@ -740,9 +732,14 @@ func main() {
 	btnOpenCalc.Importance = widget.HighImportance
 	btnOpenCalc.Icon = theme.CalendarIcon()
 
+	// CALL CREATE CALENDAR POPUP DENGAN REALTIME CALLBACK
 	btnOpenCalc.OnTapped = func() {
 		createCalendarPopup(myWindow.Canvas(), calcDate,
-			func(realtimeDate time.Time) {},
+			// Callback 1: Realtime Update
+			func(realtimeDate time.Time) {
+				updateDateLabel(realtimeDate)
+			},
+			// Callback 2: Final Selection
 			func(finalDate time.Time) {
 				calcDate = finalDate
 				performCalculation(calcDate)
@@ -804,9 +801,14 @@ func main() {
 	btnOpenWeton.Importance = widget.HighImportance
 	btnOpenWeton.Icon = theme.AccountIcon()
 
+	// CALL CREATE CALENDAR POPUP DENGAN REALTIME CALLBACK (WETON)
 	btnOpenWeton.OnTapped = func() {
 		createCalendarPopup(myWindow.Canvas(), wetonDate,
-			func(realtimeDate time.Time) {},
+			// Callback 1: Realtime Update
+			func(realtimeDate time.Time) {
+				updateWetonDateLabel(realtimeDate)
+			},
+			// Callback 2: Final Selection
 			func(finalDate time.Time) {
 				wetonDate = finalDate
 				performWetonCheck(wetonDate)
