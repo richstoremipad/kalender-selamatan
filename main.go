@@ -481,12 +481,24 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		contentStack.Refresh()
 	}
 
-	btnHitung := widget.NewButton("Pilih", func() {
+	// ==========================================
+	// TOMBOL NAVIGASI BAWAH (KEMBALI & PILIH)
+	// ==========================================
+
+	// Tombol KEMBALI (Merah/Danger) - Pojok Kiri
+	btnCancel := widget.NewButtonWithIcon("Kembali", theme.CancelIcon(), func() {
+		if popup != nil {
+			popup.Hide()
+		}
+	})
+	btnCancel.Importance = widget.DangerImportance // Merah
+
+	// Tombol PILIH/HITUNG (Hijau/Primary) - Pojok Kanan
+	btnSelect := widget.NewButtonWithIcon("Pilih", theme.ConfirmIcon(), func() {
 		if currentViewMode != 0 {
 			showToast()
 			return
 		}
-
 		if !hasSelected {
 			showToast()
 			return
@@ -496,15 +508,17 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		}
 		onCalculate(selectedDate)
 	})
-	btnHitung.Importance = widget.HighImportance
-	btnHitung.Icon = theme.ConfirmIcon()
-	bottomArea := container.NewCenter(btnHitung)
+	btnSelect.Importance = widget.HighImportance // Hijau (Primary)
+
+	// Layout untuk tombol bawah: [Kembali] <--- Spacer ---> [Pilih]
+	// Menggunakan Border Layout untuk memaksa ke pojok kiri dan kanan
+	bottomButtons := container.NewBorder(nil, nil, btnCancel, btnSelect, layout.NewSpacer())
 
 	refreshContent()
 
 	finalLayout := container.NewBorder(
 		nil,
-		container.NewPadded(bottomArea),
+		container.NewPadded(bottomButtons), // Menggunakan layout tombol baru
 		nil, nil,
 		contentStack,
 	)
