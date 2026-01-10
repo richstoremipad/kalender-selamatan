@@ -2,9 +2,11 @@ package main
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"image/color"
 	"math"
+	"net/http"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -15,6 +17,21 @@ import (
 	"fyne.io/fyne/v2/theme"
 	"fyne.io/fyne/v2/widget"
 )
+
+// ==========================================
+// KONFIGURASI VERSI APLIKASI
+// ==========================================
+
+// Ganti URL ini dengan URL raw file JSON di server Anda
+const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
+const CurrentAppVersion = "1.0.0"
+
+type UpdateData struct {
+	Version     string `json:"version"`
+	Title       string `json:"title"`
+	Message     string `json:"message"`
+	DownloadURL string `json:"download_url"` // Opsional jika ingin redirect
+}
 
 // ==========================================
 // 1. EMBED RESOURCE (GAMBAR)
@@ -265,19 +282,12 @@ func (c *clickableCard) Tapped(_ *fyne.PointEvent) {
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
-
-	// MODE NAVIGASI:
-	// 0 = Tampilan Tanggal
-	// 1 = Tampilan Bulan (Navigasi Tahun Original)
-	// 2 = Tampilan Tahun (Scroll List Simple)
 	currentViewMode := 0
-
 	hasSelected := false
 
 	contentStack := container.NewStack()
 	var popup *widget.PopUp
 
-	// --- TOAST ---
 	toastText := canvas.NewText("Pilih tanggal dulu!", ColorTextWhite)
 	toastText.TextSize = 14
 	toastText.TextStyle = fyne.TextStyle{Bold: true}
@@ -300,16 +310,11 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		year, month, _ := currentMonth.Date()
 
 		if currentViewMode == 0 {
-			// ============================
-			// VIEW 0: GRID TANGGAL
-			// ============================
 			titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
-
 			btnHeader := widget.NewButton(titleText, func() {
 				currentViewMode = 1
 				refreshContent()
 			})
-			// Transparan seperti header
 			btnHeader.Importance = widget.LowImportance
 
 			btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
@@ -357,7 +362,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					selectedDate = dateVal
 					hasSelected = true
 					refreshContent()
-					// CALLBACK REALTIME DIPANGGIL DI SINI
 					if onDateChanged != nil {
 						onDateChanged(selectedDate)
 					}
@@ -369,17 +373,12 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			}
 
 		} else if currentViewMode == 1 {
-			// ============================================
-			// VIEW 1: GRID BULAN & NAVIGASI TAHUN ORIGINAL
-			// ============================================
-
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentViewMode = 0
 				refreshContent()
 			})
 			btnBack.Importance = widget.DangerImportance
 
-			// --- NAVIGASI TAHUN ---
 			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(-1, 0, 0)
 				refreshContent()
@@ -390,12 +389,10 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				refreshContent()
 			})
 
-			// MODIFIKASI: Angka Tahun Transparan (LowImportance)
 			btnYearNum := widget.NewButton(fmt.Sprintf("%d", year), func() {
-				currentViewMode = 2 // Masuk mode scroll
+				currentViewMode = 2
 				refreshContent()
 			})
-			// Transparan / menyatu dengan background
 			btnYearNum.Importance = widget.LowImportance
 
 			yearNavLayout := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, container.NewCenter(btnYearNum))
@@ -426,11 +423,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			}
 
 		} else {
-			// ============================
-			// VIEW 2: SCROLL TAHUN (LIST)
-			// ============================
-
-			// PERUBAHAN 1: Hapus teks, ganti warna jadi MERAH (Danger)
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentViewMode = 1
 				refreshContent()
@@ -441,7 +433,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			endYear := 2100
 			totalYears := endYear - startYear + 1
 
-			// LOGIKA SCROLL KE TENGAH
 			actualIndex := year - startYear
 			scrollIndex := actualIndex - 3
 
@@ -477,7 +468,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 			listContainer := container.NewStack(list)
 
-			// PERUBAHAN 2: Hapus label "Pilih Tahun"
 			topRow := container.NewBorder(nil, nil, btnBack, nil, nil)
 
 			yearView := container.NewBorder(
@@ -652,6 +642,97 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // ==========================================
 // 7. MAIN APP
 // ==========================================
+
+// --- UPDATE CHECKER LOGIC ---
+func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
+	// Jalankan di Goroutine agar tidak memblokir UI saat startup
+	go func() {
+		// 1. Jeda 3 detik sesuai request
+		time.Sleep(3 * time.Second)
+
+		// 2. Cek Koneksi & Fetch Data
+		client := http.Client{
+			Timeout: 5 * time.Second,
+		}
+
+		resp, err := client.Get(UpdateCheckURL)
+		if err != nil {
+			// Gagal koneksi / Offline: abaikan saja
+			return
+		}
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return
+		}
+
+		// 3. Parse JSON
+		var updateInfo UpdateData
+		if err := json.NewDecoder(resp.Body).Decode(&updateInfo); err != nil {
+			return
+		}
+
+		// 4. Bandingkan Versi
+		if updateInfo.Version != CurrentAppVersion {
+			// Trigger UI Update (Harus sinkron dengan main thread di Fyne?)
+			// Widget creation biasanya aman, tapi untuk Show() lebih baik via antrian jika perlu.
+			// Di sini kita langsung buat popupnya.
+
+			// Konstruksi Popup Update
+			var popup *widget.PopUp
+
+			// Judul
+			lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
+			lblTitle.TextStyle = fyne.TextStyle{Bold: true}
+			lblTitle.TextSize = 16
+			lblTitle.Alignment = fyne.TextAlignCenter
+
+			// Versi Badge
+			lblVer := canvas.NewText("Versi Baru: "+updateInfo.Version, ColorTextWhite)
+			lblVer.TextSize = 12
+			badgeBg := canvas.NewRectangle(ColorBadgeGreen)
+			badgeBg.CornerRadius = 8
+			badgeVer := container.NewStack(badgeBg, container.NewPadded(lblVer))
+
+			// Pesan
+			msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
+			msgText.Wrapping = fyne.TextWrapWord
+
+			// Tombol Tutup / Update
+			btnClose := widget.NewButton("Tutup", func() {
+				if popup != nil {
+					popup.Hide()
+				}
+			})
+			btnClose.Importance = widget.LowImportance
+
+			// Layout Popup
+			contentVBox := container.NewVBox(
+				lblTitle,
+				container.NewCenter(badgeVer),
+				widget.NewSeparator(),
+				msgText,
+				layout.NewSpacer(),
+				btnClose,
+			)
+
+			// Styling Card Popup
+			bgRect := canvas.NewRectangle(ColorCardBg)
+			bgRect.CornerRadius = 12
+			bgRect.SetMinSize(fyne.NewSize(280, 200)) // Min size popup
+
+			finalPopupContent := container.NewStack(
+				bgRect,
+				container.NewPadded(contentVBox),
+			)
+
+			// Tampilkan Popup
+			popup = widget.NewModalPopUp(container.NewCenter(finalPopupContent), myCanvas)
+			popup.Resize(fyne.NewSize(300, 250))
+			popup.Show()
+		}
+	}()
+}
 
 func main() {
 	myApp := app.New()
@@ -970,5 +1051,11 @@ func main() {
 	)
 
 	myWindow.SetContent(container.NewStack(imgBg, mainContent))
+
+	// ========================================
+	// PANGGIL FUNGSI CEK UPDATE DI SINI
+	// ========================================
+	checkForUpdates(myWindow.Canvas(), myApp)
+
 	myWindow.ShowAndRun()
 }
