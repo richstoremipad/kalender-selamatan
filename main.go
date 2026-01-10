@@ -56,7 +56,7 @@ Kondisi Organ:
 Lidah mulai membengkak dan sering kali terjepit oleh gigi karena ruang di dalam mulut menyempit akibat gas. Mata mulai melunak dan tampak agak menonjol.`,
 
 	"Mitung": `Rumus:
-Tusarro (Dino ke pitu pasaran ke pitu).
+Tusarro (Dino ke pitu pasaran ke loro).
 
 Kajian:
 Hari ketujuh merupakan fase transisi besar dalam proses penghancuran organ dalam.
