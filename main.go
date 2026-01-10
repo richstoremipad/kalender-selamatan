@@ -27,16 +27,106 @@ var richPngData []byte
 var bgPngData []byte
 
 // ==========================================
-// 2. LOGIKA MATEMATIKA & KALENDER JAWA
+// 2. DATA PENJELASAN FASE KEMATIAN
+// ==========================================
+
+var DeskripsiFase = map[string]string{
+	"Geblag": `Hari Pertama (Malam Pertama di Alam Kubur)
+
+Pada hari pertama, jasad mulai mengalami perubahan fisik yang nyata. Ruh digambarkan masih sangat dekat dengan jasadnya dan merasa kaget dengan suasana kubur yang gelap dan sempit.
+
+Kondisi Jasad:
+Bagian perut mulai membuncit karena gas mulai terbentuk di dalam usus. Warna kulit yang tadinya cerah berubah menjadi pucat kebiruan atau hijau kehitaman, terutama di area perut dan kemaluan.
+
+Hikmah:
+Inilah alasan mengapa keluarga disunnahkan memberikan sedekah pada malam pertama untuk meringankan beban "kagetnya" ruh di alam baru.`,
+
+	"Nelung": `Hari Ketiga
+
+Hari ketiga adalah fase di mana rupa manusia mulai hilang secara perlahan.
+
+Kondisi Jasad:
+Cairan mulai keluar dari lubang-lubang tubuh (hidung, mulut, dan telinga). Bau busuk mulai keluar dengan sangat menyengat karena bakteri pembusuk telah menyebar ke seluruh organ dalam.
+
+Kondisi Organ:
+Lidah mulai membengkak dan sering kali terjepit oleh gigi karena ruang di dalam mulut menyempit akibat gas. Mata mulai melunak dan tampak agak menonjol.`,
+
+	"Mitung": `Hari Ketujuh
+
+Hari ketujuh merupakan fase transisi besar dalam proses penghancuran organ dalam.
+
+Kondisi Jasad:
+Perut yang tadinya membuncit akan pecah karena tekanan gas dan aktivitas bakteri. Organ-organ vital seperti hati, paru-paru, dan lambung mulai mencair dan hancur.
+
+Sisi Spiritual:
+Berdasarkan keterangan dalam kitab Al-Hawi lil Fatawi (Imam Suyuthi) yang sering disandingkan dengan Daqa'iqul Akhbar, tujuh hari pertama adalah masa Fitnah Kubur (ujian dan pertanyaan malaikat). Oleh karena itu, sedekah makanan pada hari ke-7 sangat ditekankan.`,
+
+	"Matang": `Hari Ke-40
+
+Pada hari ke-40, jasad sudah tidak lagi menyerupai sosok manusia yang dikenal semasa hidup.
+
+Kondisi Jasad:
+Seluruh daging mulai terlepas dari tulang belulang. Daging-daging tersebut mulai meluruh dan menyatu dengan tanah.
+
+Kondisi Wajah:
+Kulit wajah sudah hancur sepenuhnya, mata sudah hilang dari kelopaknya, dan rambut mulai rontok dari kulit kepala.
+
+Tradisi:
+Dipercaya pada hari ke-40, proses "pembersihan" sisa daging sedang terjadi secara masif, sehingga doa dikirimkan agar ruh diberikan ketenangan dalam melihat jasadnya yang hancur.`,
+
+	"Nyatus": `Hari Ke-100
+
+Memasuki hari ke-100, proses pembusukan daging sudah hampir selesai secara total.
+
+Kondisi Jasad:
+Tubuh kini didominasi oleh rangka. Hanya menyisakan sedikit jaringan otot atau kulit yang mengeras (seperti mumi) di area-area tertentu yang sulit hancur.
+
+Bau:
+Bau busuk yang menyengat sudah mulai berkurang karena sumber pembusukan (daging dan organ dalam) sudah menyatu dengan tanah.`,
+
+	"Pendhak I": `Pendhak Siji (1 Tahun)
+
+Istilah "Pendhak" adalah tradisi lokal Nusantara untuk menyebut Haul atau peringatan tahunan.
+
+Kondisi Jasad:
+Tulang-belulang mulai menjadi kering. Sumsum di dalam tulang sudah habis. Sendi-sendi yang menghubungkan tulang satu dengan yang lain mulai terlepas.
+
+Kondisi Tengkorak:
+Rahang bawah biasanya sudah terlepas dari tengkorak. Tubuh benar-benar sudah menjadi serpihan tulang yang terpisah-pisah.`,
+
+	"Pendhak II": `Pendhak Loro (2 Tahun)
+
+Memasuki tahun kedua, proses dekomposisi tulang berlanjut.
+
+Kondisi Jasad:
+Tulang-belulang semakin kering dan mulai terurai oleh tanah. Sendi-sendi utama sudah lepas sepenuhnya. Struktur kerangka tubuh sudah tidak utuh lagi.
+
+Makna:
+Peringatan ini menjadi penanda bahwa hubungan fisik almarhum dengan dunia semakin pudar, dan yang tersisa hanyalah doa dari anak cucu serta amal jariyahnya.`,
+
+	"Nyewu": `Hari Ke-1000 (Nyewu)
+
+Ini adalah fase terakhir dalam proses dekomposisi jasad manusia secara alami.
+
+Kondisi Jasad:
+Tulang-belulang mulai melapuk dan menjadi rapuh. Dalam kitab dijelaskan bahwa pada fase ini, jasad sudah benar-benar menyatu dengan tanah (menjadi debu).
+
+Satu Bagian yang Tersisa:
+Dalam keyakinan Islam (berdasarkan Hadis Nabi), hanya satu bagian yang tidak akan hancur dimakan tanah, yaitu Ajbuz Dzamb (tulang ekor yang sangat kecil), yang darinya manusia akan dibangkitkan kembali pada hari kiamat.
+
+Makna Doa:
+Peringatan 1000 hari dimaksudkan sebagai doa pamungkas bagi keluarga untuk memohonkan ampunan total bagi almarhum/ah karena perjalanan jasadnya di bumi sudah selesai secara fisik.`,
+}
+
+// ==========================================
+// 3. LOGIKA MATEMATIKA & KALENDER JAWA
 // ==========================================
 
 var (
-	HariIndo  = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
-	Pasaran   = []string{"Legi", "Pahing", "Pon", "Wage", "Kliwon"}
-	BulanIndo = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
-	BulanJawa = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
-	
-	// NILAI NEPTU
+	HariIndo     = []string{"Minggu", "Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu"}
+	Pasaran      = []string{"Legi", "Pahing", "Pon", "Wage", "Kliwon"}
+	BulanIndo    = []string{"", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"}
+	BulanJawa    = []string{"", "Suro", "Sapar", "Mulud", "Bakda Mulud", "Jumadil Awal", "Jumadil Akhir", "Rajeb", "Ruwah", "Poso", "Sawal", "Sela", "Besar"}
 	NilaiHari    = []int{5, 4, 3, 7, 8, 6, 9}
 	NilaiPasaran = []int{5, 9, 7, 4, 8}
 )
@@ -80,19 +170,17 @@ func formatIndoDate(t time.Time) string {
 }
 
 func calculateNeptu(t time.Time) string {
-	idxHari := int(t.Weekday()) 
+	idxHari := int(t.Weekday())
 	valHari := NilaiHari[idxHari]
-
 	jd := dateToJDN(t)
 	idxPasaran := jd % 5
 	valPasaran := NilaiPasaran[idxPasaran]
-
 	total := valHari + valPasaran
 	return fmt.Sprintf("Jumlah Neptu: %d", total)
 }
 
 // ==========================================
-// 3. KOMPONEN UI CUSTOM & COLORS
+// 4. KOMPONEN UI CUSTOM & COLORS
 // ==========================================
 
 var (
@@ -131,29 +219,48 @@ func (m myTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) colo
 	return m.Theme.Color(name, variant)
 }
 
+// --- WIDGET KLIKABLE CUSTOM ---
+// Widget ini membungkus container agar bisa menerima event Tap (Klik)
+type clickableCard struct {
+	widget.BaseWidget
+	content fyne.CanvasObject
+	onTap   func()
+}
+
+func newClickableCard(content fyne.CanvasObject, onTap func()) *clickableCard {
+	c := &clickableCard{content: content, onTap: onTap}
+	c.ExtendBaseWidget(c)
+	return c
+}
+
+func (c *clickableCard) CreateRenderer() fyne.WidgetRenderer {
+	return widget.NewSimpleRenderer(c.content)
+}
+
+func (c *clickableCard) Tapped(_ *fyne.PointEvent) {
+	if c.onTap != nil {
+		c.onTap()
+	}
+}
+
 // ==========================================
-// 4. LOGIKA KALENDER CUSTOM
+// 5. LOGIKA KALENDER CUSTOM
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
 	isYearSelectionMode := false
-	
-	// STATUS: Apakah user sudah klik tanggal? Default False agar tidak hijau di awal.
-	hasSelected := false 
+	hasSelected := false
 
 	contentStack := container.NewStack()
 	var popup *widget.PopUp
 
-	// --- TOAST COMPONENT (Pesan Error) ---
 	toastText := canvas.NewText("Pilih tanggal dulu!", ColorTextWhite)
 	toastText.TextSize = 14
 	toastText.TextStyle = fyne.TextStyle{Bold: true}
-	
 	toastBg := canvas.NewRectangle(color.NRGBA{R: 0, G: 0, B: 0, A: 200})
 	toastBg.CornerRadius = 8
-	
 	toastCard := container.NewStack(toastBg, container.NewPadded(toastText))
 	toastWrapper := container.NewCenter(toastCard)
 	toastWrapper.Hide()
@@ -165,7 +272,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			toastWrapper.Hide()
 		}()
 	}
-	// -------------------------------------
 
 	var refreshContent func()
 	refreshContent = func() {
@@ -179,7 +285,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		btnHeader.Importance = widget.LowImportance
 
 		if !isYearSelectionMode {
-			// --- MODE TANGGAL ---
 			btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(0, -1, 0)
 				refreshContent()
@@ -213,7 +318,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				dayNum := d
 				dateVal := time.Date(year, month, dayNum, 0, 0, 0, 0, time.Local)
 				btn := widget.NewButton(fmt.Sprintf("%d", dayNum), nil)
-				
 				if hasSelected &&
 					dateVal.Year() == selectedDate.Year() &&
 					dateVal.Month() == selectedDate.Month() &&
@@ -222,7 +326,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				} else {
 					btn.Importance = widget.MediumImportance
 				}
-				
 				btn.OnTapped = func() {
 					selectedDate = dateVal
 					hasSelected = true
@@ -233,23 +336,18 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				}
 				gridDates.Add(btn)
 			}
-
 			contentStack.Objects = []fyne.CanvasObject{
 				container.NewVBox(topNav, gridDays, gridDates),
 			}
-
 		} else {
-			// --- MODE BULAN TAHUN ---
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				isYearSelectionMode = false
 				refreshContent()
 			})
 			btnBack.Importance = widget.DangerImportance
-
 			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
 			lblYear.TextStyle = fyne.TextStyle{Bold: true}
 			lblYear.Alignment = fyne.TextAlignCenter
-
 			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(-1, 0, 0)
 				refreshContent()
@@ -259,7 +357,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				refreshContent()
 			})
 			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
-
 			monthGrid := container.New(layout.NewGridLayout(3))
 			for i := 1; i <= 12; i++ {
 				mIdx := i
@@ -279,7 +376,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				}
 				monthGrid.Add(container.NewCenter(btnMonth))
 			}
-
 			topRow := container.NewHBox(container.NewCenter(btnBack), layout.NewSpacer())
 			contentStack.Objects = []fyne.CanvasObject{
 				container.NewVBox(topRow, container.NewPadded(yearNav), monthGrid),
@@ -316,7 +412,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	bgRect.SetMinSize(fyne.NewSize(280, 330))
 
 	cardContent := container.NewStack(
-		bgRect, 
+		bgRect,
 		container.NewPadded(finalLayout),
 		toastWrapper,
 	)
@@ -328,11 +424,10 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 }
 
 // ==========================================
-// 5. HELPER UI CARDS
+// 6. HELPER UI CARDS
 // ==========================================
 
-// UPDATED: Added rumusStr parameter
-func createCard(title, subTitle, dateStr, wetonStr, rumusStr string, statusType int, diffDays int) fyne.CanvasObject {
+func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, statusType int, diffDays int, parentCanvas fyne.Canvas) fyne.CanvasObject {
 	var badgeColor color.Color
 	var badgeTextStr string
 	switch statusType {
@@ -346,29 +441,26 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr string, statusType 
 		badgeColor = ColorBadgeBlue
 		badgeTextStr = fmt.Sprintf("⏳ %d Hari Lagi", diffDays)
 	}
-	
-	// Left Side
+
 	lblTitle := canvas.NewText(title, ColorTextWhite)
 	lblTitle.TextSize = 16
 	lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 	lblSub := canvas.NewText(subTitle, ColorTextGrey)
 	lblSub.TextSize = 12
 	leftCont := container.NewVBox(lblTitle, lblSub)
-	
-	// Right Side
+
 	lblDate := canvas.NewText(dateStr, ColorTextWhite)
 	lblDate.Alignment = fyne.TextAlignTrailing
 	lblDate.TextSize = 14
 	lblDate.TextStyle = fyne.TextStyle{Bold: true}
-	
+
 	lblWeton := canvas.NewText(wetonStr, ColorTextGrey)
 	lblWeton.Alignment = fyne.TextAlignTrailing
 	lblWeton.TextSize = 11
-	
-	// NEW: Label Rumus
+
 	var rightCont *fyne.Container
 	if rumusStr != "" {
-		lblRumus := canvas.NewText(rumusStr, ColorTextOrange) // Pakai warna Orange biar beda
+		lblRumus := canvas.NewText(rumusStr, ColorTextOrange)
 		lblRumus.Alignment = fyne.TextAlignTrailing
 		lblRumus.TextSize = 10
 		lblRumus.TextStyle = fyne.TextStyle{Italic: true}
@@ -395,11 +487,60 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr string, statusType 
 	content := container.NewVBox(topRow, container.NewPadded(botRow))
 	bg := canvas.NewRectangle(ColorCardBg)
 	bg.CornerRadius = 10
-	return container.NewStack(bg, container.NewPadded(content))
+
+	visualCard := container.NewStack(bg, container.NewPadded(content))
+
+	// Jika ada deskripsi (Tab Selamatan), buat menjadi clickable
+	if descStr != "" && parentCanvas != nil {
+		return newClickableCard(visualCard, func() {
+			// LOGIKA POPUP DESKRIPSI
+			
+			// 1. Konten Teks (Scrollable)
+			lblDesc := widget.NewLabel(descStr)
+			lblDesc.Wrapping = fyne.TextWrapWord
+			
+			// 2. Judul Popup
+			lblHeader := widget.NewLabel("Penjelasan Fase: " + title)
+			lblHeader.Alignment = fyne.TextAlignCenter
+			lblHeader.TextStyle = fyne.TextStyle{Bold: true}
+			
+			// 3. Tombol Tutup
+			var popup *widget.PopUp
+			btnClose := widget.NewButton("Tutup", func() {
+				if popup != nil {
+					popup.Hide()
+				}
+			})
+			btnClose.Importance = widget.HighImportance
+
+			scrollContainer := container.NewVScroll(container.NewPadded(lblDesc))
+			scrollContainer.SetMinSize(fyne.NewSize(0, 300)) // Minimal tinggi scroll
+
+			contentBox := container.NewBorder(
+				lblHeader, 
+				container.NewPadded(btnClose), 
+				nil, nil, 
+				scrollContainer,
+			)
+
+			bgRect := canvas.NewRectangle(ColorCardBg)
+			bgRect.CornerRadius = 12
+			bgRect.SetMinSize(fyne.NewSize(300, 400))
+			
+			finalPopupContent := container.NewStack(bgRect, container.NewPadded(contentBox))
+			
+			popup = widget.NewModalPopUp(container.NewCenter(finalPopupContent), parentCanvas)
+			popup.Resize(fyne.NewSize(320, 450))
+			popup.Show()
+		})
+	}
+
+	// Jika tidak ada deskripsi (Tab Weton), kembalikan card biasa
+	return visualCard
 }
 
 // ==========================================
-// 6. MAIN APP
+// 7. MAIN APP
 // ==========================================
 
 func main() {
@@ -409,13 +550,10 @@ func main() {
 	myWindow := myApp.NewWindow("Kalkulator Selamatan Jawa & Weton")
 	myWindow.Resize(fyne.NewSize(400, 750))
 
-	// --- SETUP BACKGROUND IMAGE ---
 	resBg := fyne.NewStaticResource("bg.png", bgPngData)
 	imgBg := canvas.NewImageFromResource(resBg)
 	imgBg.FillMode = canvas.ImageFillCover
-	// ------------------------------
 
-	// --- HEADER ---
 	gradient := canvas.NewHorizontalGradient(ColorHeaderTop, ColorHeaderBot)
 	headerTitle := canvas.NewText("Kalkulator Selamatan & Weton", ColorTextWhite)
 	headerTitle.TextStyle = fyne.TextStyle{Bold: true}
@@ -443,7 +581,7 @@ func main() {
 	lblDateTitle := canvas.NewText("Tanggal Wafat / Geblag:", ColorTextGrey)
 	lblDateTitle.TextSize = 12
 
-	lblSelectedDate := widget.NewLabel("Belum dipilih") 
+	lblSelectedDate := widget.NewLabel("Belum dipilih")
 	lblSelectedDate.Alignment = fyne.TextAlignCenter
 	lblSelectedDate.TextStyle = fyne.TextStyle{Bold: true}
 
@@ -460,18 +598,17 @@ func main() {
 			Name   string
 			Sub    string
 			Offset int
-			Rumus  string // UPDATED: Tambah field Rumus
+			Rumus  string
 		}
-		// Data Rumus berdasarkan Pakem Jawa
 		events := []Event{
-			{"Geblag", "Hari H", 0, ""}, // Geblag tidak ada rumus
-			{"Nelung", "3 Hari", 2, "Lusarlu"},
-			{"Mitung", "7 Hari", 6, "Tusarro"},
-			{"Matang", "40 Hari", 39, "Masarma"},
-			{"Nyatus", "100 Hari", 99, "Rosarma"},
-			{"Pendhak I", "1 Tahun", 353, "Patsarpat"},
-			{"Pendhak II", "2 Tahun", 707, "Rosarpat"},
-			{"Nyewu", "1000 Hari", 999, "Nemsarmo"},
+			{"Geblag", "Hari H", 0, ""},
+			{"Nelung", "3 Hari", 2, "Rumus: Lusarlu"},
+			{"Mitung", "7 Hari", 6, "Rumus: Tusarpat"},
+			{"Matang", "40 Hari", 39, "Rumus: Masarma"},
+			{"Nyatus", "100 Hari", 99, "Rumus: Rosarji"},
+			{"Pendhak I", "1 Tahun", 353, "Rumus: Patsarpat"},
+			{"Pendhak II", "2 Tahun", 707, "Rumus: Rosarji"},
+			{"Nyewu", "1000 Hari", 999, "Rumus: Nemsarmo"},
 		}
 
 		now := time.Now()
@@ -488,8 +625,12 @@ func main() {
 			} else if diff == 0 {
 				status = 2
 			}
-			// Pass rumusStr ke createCard
-			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), e.Rumus, status, diff)
+			
+			// Ambil deskripsi dari Map Global
+			desc := DeskripsiFase[e.Name]
+			
+			// Passing myWindow.Canvas() agar popup bisa muncul
+			card := createCard(e.Name, e.Sub, formatIndoDate(targetDate), formatWeton(targetDate), e.Rumus, desc, status, diff, myWindow.Canvas())
 			resultBox.Add(card)
 			resultBox.Add(layout.NewSpacer())
 		}
@@ -553,12 +694,11 @@ func main() {
 	performWetonCheck := func(t time.Time) {
 		updateWetonDateLabel(t)
 		wetonResultBox.Objects = nil
-
 		t = time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, t.Location())
 		neptuStr := calculateNeptu(t)
-
-		// Rumus dikosongkan ("") untuk tab Weton
-		card := createCard("Hasil Weton", neptuStr, formatIndoDate(t), formatWeton(t), "", 4, 0)
+		
+		// Untuk weton, deskripsi kosong ("") jadi tidak bisa diklik
+		card := createCard("Hasil Weton", neptuStr, formatIndoDate(t), formatWeton(t), "", "", 4, 0, nil)
 		wetonResultBox.Add(card)
 		wetonResultBox.Refresh()
 	}
