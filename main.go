@@ -25,7 +25,7 @@ import (
 // ==========================================
 
 // GANTI URL INI DENGAN URL ASLI ANDA
-const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
+const UpdateCheckURL = "https://docs.google.com/document/d/1lUsaXSR6arcTsxpwlZLvVeu37Kk-G7XjyQkOUC-du5I/export?format=txt" 
 
 // VERSI APLIKASI SAAT INI
 const CurrentAppVersion = "1.0.0"
