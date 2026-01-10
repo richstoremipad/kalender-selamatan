@@ -24,7 +24,7 @@ import (
 // ==========================================
 
 // Ganti URL ini dengan URL raw file JSON di server Anda
-const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
+const UpdateCheckURL = "https://example.com/version.json" 
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
@@ -644,17 +644,15 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // 7. MAIN APP
 // ==========================================
 
-// --- UPDATE CHECKER LOGIC (REVISED) ---
+// --- UPDATE CHECKER LOGIC (FIXED LAYOUT) ---
 func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 	go func() {
-		// 1. Jeda 3 detik
 		time.Sleep(3 * time.Second)
 
-		// 2. Cek Koneksi & Fetch Data
 		client := http.Client{Timeout: 5 * time.Second}
 		resp, err := client.Get(UpdateCheckURL)
 		if err != nil {
-			return // Offline
+			return
 		}
 		defer resp.Body.Close()
 
@@ -662,13 +660,11 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			return
 		}
 
-		// 3. Parse JSON
 		var updateInfo UpdateData
 		if err := json.NewDecoder(resp.Body).Decode(&updateInfo); err != nil {
 			return
 		}
 
-		// 4. Jika Versi Beda, Tampilkan Popup
 		if updateInfo.Version != CurrentAppVersion {
 
 			// -- UI POPUP --
@@ -686,48 +682,63 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
 			msgText.Wrapping = fyne.TextWrapWord
 
-			// TOMBOL UPDATE (Buka URL)
-			btnUpdate := widget.NewButton("Update Sekarang", func() {
-				// Parse URL dari JSON
+			// ----------------------------------------------------
+			// LOGIKA TOMBOL BARU (HBox + Spacer)
+			// ----------------------------------------------------
+
+			// TOMBOL EXIT
+			btnExit := widget.NewButton("Keluar", func() {
+				myApp.Quit()
+			})
+			btnExit.Importance = widget.DangerImportance // Merah
+
+			// TOMBOL UPDATE
+			btnUpdate := widget.NewButton("Update", func() {
 				u, err := url.Parse(updateInfo.DownloadURL)
 				if err == nil {
 					myApp.OpenURL(u)
 				}
 			})
-			btnUpdate.Importance = widget.HighImportance // Warna Biru/Primary
+			btnUpdate.Importance = widget.HighImportance // Biru/Primary
 
-			// TOMBOL EXIT (Force Close)
-			btnExit := widget.NewButton("Keluar", func() {
-				myApp.Quit()
-			})
-			btnExit.Importance = widget.DangerImportance // Warna Merah
+			// Container Horizontal: [Keluar] --SPACER-- [Update]
+			// NewHBox membuat tombol mengikuti ukuran text (tidak melebar)
+			// Spacer mendorong mereka ke ujung kiri dan kanan.
+			buttonRow := container.NewHBox(
+				btnExit,
+				layout.NewSpacer(),
+				btnUpdate,
+			)
 
-			// Layout
-			contentVBox := container.NewVBox(
+			// Konten Utama (Judul, Versi, Pesan)
+			mainContent := container.NewVBox(
 				lblTitle,
 				container.NewCenter(badgeVer),
 				widget.NewSeparator(),
 				msgText,
-				layout.NewSpacer(),
-				btnUpdate,
-				btnExit,
+			)
+
+			// Menggabungkan semuanya dengan Border Layout
+			// Konten Utama di Tengah, Tombol di Bawah
+			finalLayout := container.NewBorder(
+				nil,                          // Top
+				container.NewPadded(buttonRow), // Bottom (Tombol)
+				nil,                          // Left
+				nil,                          // Right
+				container.NewPadded(mainContent), // Center
 			)
 
 			bgRect := canvas.NewRectangle(ColorCardBg)
 			bgRect.CornerRadius = 12
 			bgRect.SetMinSize(fyne.NewSize(280, 250))
 
-			finalPopupContent := container.NewStack(
+			popupContent := container.NewStack(
 				bgRect,
-				container.NewPadded(contentVBox),
+				container.NewPadded(finalLayout),
 			)
 
-			// Tampilkan Popup
-			popup := widget.NewModalPopUp(container.NewCenter(finalPopupContent), myCanvas)
-			// Cegah popup ditutup dengan klik di luar area (Modal behavior)
-			// Fyne default popup bisa dicancel klik luar, untuk "Mandatory" kita bisa akali 
-			// dengan logic show ulang jika di-hide, tapi untuk simple UX, tombol Exit sudah cukup.
-			popup.Resize(fyne.NewSize(300, 300))
+			popup := widget.NewModalPopUp(container.NewCenter(popupContent), myCanvas)
+			popup.Resize(fyne.NewSize(320, 300))
 			popup.Show()
 		}
 	}()
