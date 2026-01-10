@@ -243,18 +243,21 @@ func (c *clickableCard) Tapped(_ *fyne.PointEvent) {
 }
 
 // ==========================================
-// 5. LOGIKA KALENDER CUSTOM
+// 5. LOGIKA KALENDER CUSTOM (SCROLLABLE YEAR)
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
 	currentMonth := initialDate
 	selectedDate := initialDate
+	
+	// Mode Navigasi: False = Kalender Tanggal, True = Pilih Tahun (Scroll List)
 	isYearSelectionMode := false
 	hasSelected := false
 
 	contentStack := container.NewStack()
 	var popup *widget.PopUp
 
+	// --- TOAST ---
 	toastText := canvas.NewText("Pilih tanggal dulu!", ColorTextWhite)
 	toastText.TextSize = 14
 	toastText.TextStyle = fyne.TextStyle{Bold: true}
@@ -275,8 +278,10 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	var refreshContent func()
 	refreshContent = func() {
 		year, month, _ := currentMonth.Date()
+		// Title Header: "Januari 2024"
 		titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
 
+		// Saat Header diklik -> Masuk Mode Pilih Tahun
 		btnHeader := widget.NewButton(titleText, func() {
 			isYearSelectionMode = !isYearSelectionMode
 			refreshContent()
@@ -284,6 +289,9 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 		btnHeader.Importance = widget.LowImportance
 
 		if !isYearSelectionMode {
+			// ============================
+			// TAMPILAN 1: GRID KALENDER
+			// ============================
 			btnPrev := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(0, -1, 0)
 				refreshContent()
@@ -338,52 +346,102 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			contentStack.Objects = []fyne.CanvasObject{
 				container.NewVBox(topNav, gridDays, gridDates),
 			}
+
 		} else {
-			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
+			// ============================
+			// TAMPILAN 2: SCROLL TAHUN
+			// ============================
+			
+			// Tombol Kembali
+			btnBack := widget.NewButtonWithIcon("Kembali", theme.NavigateBackIcon(), func() {
 				isYearSelectionMode = false
 				refreshContent()
 			})
-			btnBack.Importance = widget.DangerImportance
-			lblYear := widget.NewLabel(fmt.Sprintf("%d", year))
-			lblYear.TextStyle = fyne.TextStyle{Bold: true}
-			lblYear.Alignment = fyne.TextAlignCenter
-			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
-				currentMonth = currentMonth.AddDate(-1, 0, 0)
-				refreshContent()
-			})
-			btnNextYear := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
-				currentMonth = currentMonth.AddDate(1, 0, 0)
-				refreshContent()
-			})
-			yearNav := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, lblYear)
-			monthGrid := container.New(layout.NewGridLayout(3))
-			for i := 1; i <= 12; i++ {
-				mIdx := i
-				mName := BulanIndo[mIdx]
-				if len(mName) > 3 {
-					mName = mName[:3]
-				}
-				btnMonth := widget.NewButton(mName, func() {
-					currentMonth = time.Date(currentMonth.Year(), time.Month(mIdx), 1, 0, 0, 0, 0, time.Local)
-					isYearSelectionMode = false
-					refreshContent()
-				})
-				if time.Month(mIdx) == month {
-					btnMonth.Importance = widget.HighImportance
-				} else {
-					btnMonth.Importance = widget.MediumImportance
-				}
-				monthGrid.Add(container.NewCenter(btnMonth))
-			}
-			topRow := container.NewHBox(container.NewCenter(btnBack), layout.NewSpacer())
-			contentStack.Objects = []fyne.CanvasObject{
-				container.NewVBox(topRow, container.NewPadded(yearNav), monthGrid),
-			}
+			btnBack.Importance = widget.LowImportance
+
+			// Logika Data Tahun
+			startYear := 1900
+			endYear := 2100
+			totalYears := endYear - startYear + 1
+			
+			// Cari Index Tahun Saat Ini untuk Auto-Scroll
+			targetIndex := year - startYear
+			if targetIndex < 0 { targetIndex = 0 }
+			if targetIndex >= totalYears { targetIndex = totalYears - 1 }
+
+			// Widget List
+			list := widget.NewList(
+				func() int {
+					return totalYears
+				},
+				func() fyne.CanvasObject {
+					// Template Item: Tombol Lebar
+					btn := widget.NewButton("Template", nil)
+					btn.Alignment = widget.ButtonAlignCenter
+					return btn
+				},
+				func(i widget.ListItemID, o fyne.CanvasObject) {
+					displayYear := startYear + i
+					btn := o.(*widget.Button)
+					btn.SetText(fmt.Sprintf("%d", displayYear))
+					
+					// Highlight Tahun yang sedang aktif
+					if displayYear == year {
+						btn.Importance = widget.HighImportance
+					} else {
+						btn.Importance = widget.LowImportance
+					}
+					
+					btn.OnTapped = func() {
+						// Set Tahun Baru, Bulan Tetap (Januari atau bulan aktif)
+						// Disini kita set ke tanggal 1 bulan tersebut agar aman
+						currentMonth = time.Date(displayYear, month, 1, 0, 0, 0, 0, time.Local)
+						isYearSelectionMode = false
+						refreshContent()
+					}
+				},
+			)
+
+			// Layout List di dalam container
+			listContainer := container.NewStack(list)
+			
+			// Header Mode Tahun
+			lblMenu := widget.NewLabel("Pilih Tahun")
+			lblMenu.Alignment = fyne.TextAlignCenter
+			lblMenu.TextStyle = fyne.TextStyle{Bold: true}
+			
+			topRow := container.NewBorder(nil, nil, btnBack, nil, lblMenu)
+			
+			// Susunan Tampilan Tahun
+			yearView := container.NewBorder(
+				container.NewPadded(topRow),
+				nil, nil, nil,
+				listContainer,
+			)
+			
+			contentStack.Objects = []fyne.CanvasObject{yearView}
+			
+			// Auto Scroll ke Tahun saat ini (Perlu di-defer agar layout siap)
+			// Namun karena ini dalam refreshContent synchronous, kita coba scroll langsung
+			list.ScrollTo(widget.ListItemID(targetIndex))
 		}
+		
 		contentStack.Refresh()
 	}
 
 	btnHitung := widget.NewButton("Pilih", func() {
+		// Validasi hanya berlaku jika di mode Kalender, 
+		// Jika di mode Tahun, tombol ini mungkin tertutup atau user harus kembali dulu.
+		// Tapi UI kita menaruh tombol ini di BOTTOM (diluar contentStack), 
+		// jadi tombol ini selalu ada.
+		
+		if isYearSelectionMode {
+			// Jika user menekan Pilih saat mode tahun, kita anggap batal ganti tahun/selesai
+			isYearSelectionMode = false
+			refreshContent()
+			return
+		}
+
 		if !hasSelected {
 			showToast()
 			return
@@ -723,12 +781,10 @@ func main() {
 	)
 
 	// =======================================================
-	// FOOTER SETUP (DINAMIS)
+	// FOOTER SETUP
 	// =======================================================
 
-	// 1. Footer untuk Selamatan (SESUAI SCRIPT ASLI/ORIGINAL)
 	richNoteSelamatan := widget.NewRichText(
-		// 1. Judul (Orange)
 		&widget.TextSegment{
 			Text: "Notes: ",
 			Style: widget.RichTextStyle{
@@ -737,7 +793,6 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
-		// 2. Teks Awal (Default)
 		&widget.TextSegment{
 			Text: "Perhitungan ini menggunakan rumus ",
 			Style: widget.RichTextStyle{
@@ -745,7 +800,6 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true},
 			},
 		},
-		// 3. Teks Khusus (MERAH)
 		&widget.TextSegment{
 			Text: "lusarlu ",
 			Style: widget.RichTextStyle{
@@ -754,7 +808,6 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
-
 		&widget.TextSegment{
 			Text: "hingga ",
 			Style: widget.RichTextStyle{
@@ -762,7 +815,6 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true},
 			},
 		},
-
 		&widget.TextSegment{
 			Text: "nemsarmo ",
 			Style: widget.RichTextStyle{
@@ -771,7 +823,6 @@ func main() {
 				TextStyle: fyne.TextStyle{Italic: true, Bold: true},
 			},
 		},
-		// 4. Teks Akhir (Default)
 		&widget.TextSegment{
 			Text: ". Jikapun ada selisih 1 hari, tidak masalah karena perbedaan penentuan awal bulan Hijriah/Jawa.",
 			Style: widget.RichTextStyle{
@@ -782,7 +833,6 @@ func main() {
 	)
 	richNoteSelamatan.Wrapping = fyne.TextWrapWord
 
-	// 2. Footer untuk Weton (BARU)
 	richNoteWeton := widget.NewRichText(
 		&widget.TextSegment{
 			Text: "Notes: ",
@@ -803,9 +853,8 @@ func main() {
 	)
 	richNoteWeton.Wrapping = fyne.TextWrapWord
 
-	// Container untuk Footer Teks
 	noteContainer := container.NewStack()
-	noteContainer.Add(richNoteSelamatan) // Default awal
+	noteContainer.Add(richNoteSelamatan)
 
 	resRich := fyne.NewStaticResource("rich.png", richPngData)
 	imgCredit := canvas.NewImageFromResource(resRich)
@@ -831,9 +880,8 @@ func main() {
 	)
 	tabs.SetTabLocation(container.TabLocationTop)
 
-	// LOGIKA GANTI FOOTER SAAT TAB DIKLIK
 	tabs.OnSelected = func(i *container.TabItem) {
-		noteContainer.Objects = nil // Kosongkan container
+		noteContainer.Objects = nil 
 		if i.Text == "Hitung Selamatan" {
 			noteContainer.Add(richNoteSelamatan)
 		} else {
