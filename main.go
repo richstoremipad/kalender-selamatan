@@ -243,7 +243,7 @@ func (c *clickableCard) Tapped(_ *fyne.PointEvent) {
 }
 
 // ==========================================
-// 5. LOGIKA KALENDER CUSTOM (3 LAYERS)
+// 5. LOGIKA KALENDER CUSTOM
 // ==========================================
 
 func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDateChanged func(time.Time), onCalculate func(time.Time)) {
@@ -251,9 +251,9 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	selectedDate := initialDate
 	
 	// MODE NAVIGASI:
-	// 0 = Tampilan Tanggal (Default)
-	// 1 = Tampilan Bulan (Pilih Bulan & Tahun)
-	// 2 = Tampilan Tahun (Scroll List)
+	// 0 = Tampilan Tanggal
+	// 1 = Tampilan Bulan (Navigasi Tahun Original)
+	// 2 = Tampilan Tahun (Scroll List Simple)
 	currentViewMode := 0
 	
 	hasSelected := false
@@ -289,7 +289,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			// ============================
 			titleText := fmt.Sprintf("%s %d", BulanIndo[month], year)
 			
-			// Klik Header -> Pindah ke View 1 (Pilih Bulan)
 			btnHeader := widget.NewButton(titleText, func() {
 				currentViewMode = 1 
 				refreshContent()
@@ -353,41 +352,39 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 		} else if currentViewMode == 1 {
 			// ============================================
-			// VIEW 1: GRID BULAN (NAVIGASI TAHUN HYBRID)
+			// VIEW 1: GRID BULAN & NAVIGASI TAHUN ORIGINAL
 			// ============================================
 			
-			// Tombol Kembali ke View 0 (Tanggal)
 			btnBack := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentViewMode = 0
 				refreshContent()
 			})
 			btnBack.Importance = widget.DangerImportance
 
-			// --- NAVIGASI TAHUN ---
-			// 1. Panah Kiri (Kurangi Tahun)
+			// --- NAVIGASI TAHUN ORIGINAL ---
+			// Panah Kiri
 			btnPrevYear := widget.NewButtonWithIcon("", theme.NavigateBackIcon(), func() {
 				currentMonth = currentMonth.AddDate(-1, 0, 0)
 				refreshContent()
 			})
 			
-			// 2. Panah Kanan (Tambah Tahun)
+			// Panah Kanan
 			btnNextYear := widget.NewButtonWithIcon("", theme.NavigateNextIcon(), func() {
 				currentMonth = currentMonth.AddDate(1, 0, 0)
 				refreshContent()
 			})
 
-			// 3. Angka Tahun (Tengah) - Bisa diklik untuk buka Scroll Tahun
+			// Angka Tahun (Tengah) - Polos (Default Importance) tapi Klikable
 			btnYearNum := widget.NewButton(fmt.Sprintf("%d", year), func() {
-				currentViewMode = 2 // Masuk mode Scroll Tahun
+				currentViewMode = 2 // Masuk ke mode scroll tahun
 				refreshContent()
 			})
-			btnYearNum.Importance = widget.HighImportance // Supaya terlihat jelas bisa diklik
+			// Tidak diberi warna khusus (default) agar tidak "norak"
+			btnYearNum.Importance = widget.MediumImportance 
 
-			// Susun Navigasi: [ < ] [ TAHUN ] [ > ]
-			// Kita pakai container.NewBorder. Left=Prev, Right=Next, Center=AngkaTahun
-			yearNavLayout := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, btnYearNum)
+			// Layout Navigasi Tahun
+			yearNavLayout := container.NewBorder(nil, nil, btnPrevYear, btnNextYear, container.NewCenter(btnYearNum))
 
-			// --- GRID BULAN ---
 			monthGrid := container.New(layout.NewGridLayout(3))
 			for i := 1; i <= 12; i++ {
 				mIdx := i
@@ -395,7 +392,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 				if len(mName) > 3 {
 					mName = mName[:3]
 				}
-				// Klik Bulan -> Set Bulan Baru -> Kembali ke View 0 (Tanggal)
 				btnMonth := widget.NewButton(mName, func() {
 					currentMonth = time.Date(currentMonth.Year(), time.Month(mIdx), 1, 0, 0, 0, 0, time.Local)
 					currentViewMode = 0 
@@ -416,21 +412,21 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 
 		} else {
 			// ============================
-			// VIEW 2: SCROLL TAHUN (LIST)
+			// VIEW 2: SCROLL TAHUN (POLOS)
 			// ============================
 			
-			// Tombol Kembali ke View 1 (Bulan)
 			btnBack := widget.NewButtonWithIcon("Kembali ke Bulan", theme.NavigateBackIcon(), func() {
 				currentViewMode = 1
 				refreshContent()
 			})
 			btnBack.Importance = widget.LowImportance
 
-			// Logika Data Tahun
+			// Setup List
 			startYear := 1900
 			endYear := 2100
 			totalYears := endYear - startYear + 1
 			
+			// Index tahun saat ini untuk fokus scroll
 			targetIndex := year - startYear
 			if targetIndex < 0 { targetIndex = 0 }
 			if targetIndex >= totalYears { targetIndex = totalYears - 1 }
@@ -449,16 +445,13 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					btn := o.(*widget.Button)
 					btn.SetText(fmt.Sprintf("%d", displayYear))
 					
-					if displayYear == year {
-						btn.Importance = widget.HighImportance
-					} else {
-						btn.Importance = widget.LowImportance
-					}
+					// HAPUS WARNA: Semua tombol tahun tampil standar (Medium/Low)
+					// Tidak ada HighImportance (Hijau) meskipun tahun terpilih
+					btn.Importance = widget.MediumImportance
 					
-					// Klik Tahun -> Set Tahun Baru -> Kembali ke View 1 (Bulan)
 					btn.OnTapped = func() {
 						currentMonth = time.Date(displayYear, month, 1, 0, 0, 0, 0, time.Local)
-						currentViewMode = 1 
+						currentViewMode = 1 // Kembali ke bulan
 						refreshContent()
 					}
 				},
@@ -480,7 +473,7 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			
 			contentStack.Objects = []fyne.CanvasObject{yearView}
 			
-			// Auto scroll
+			// FOKUS: Scroll ke tahun saat ini agar berada di area pandang
 			list.ScrollTo(widget.ListItemID(targetIndex))
 		}
 		
@@ -488,7 +481,6 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 	}
 
 	btnHitung := widget.NewButton("Pilih", func() {
-		// Validasi hanya jika di mode tanggal (View 0)
 		if currentViewMode != 0 {
 			showToast() 
 			return
