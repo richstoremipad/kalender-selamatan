@@ -426,8 +426,8 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			// LOGIKA SCROLL KE TENGAH
 			// Cari index tahun saat ini
 			actualIndex := year - startYear
-			// Kurangi 3 agar tahun terpilih ada di tengah list (bukan paling atas)
-			scrollIndex := actualIndex - 3
+			// Kurangi 2 (bukan 3) agar posisi lebih ke tengah visual
+			scrollIndex := actualIndex - 2
 			
 			// Safety check agar tidak minus
 			if scrollIndex < 0 { scrollIndex = 0 }
@@ -475,9 +475,9 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			
 			contentStack.Objects = []fyne.CanvasObject{yearView}
 			
-			// FIX: Gunakan Goroutine + Sleep untuk memastikan Layout siap sebelum Scroll
+			// FIX: Gunakan Goroutine + Sleep 200ms untuk memastikan Layout siap sebelum Scroll
 			go func() {
-				time.Sleep(100 * time.Millisecond) // Jeda 100ms
+				time.Sleep(200 * time.Millisecond) // Jeda 200ms
 				list.ScrollTo(widget.ListItemID(scrollIndex))
 			}()
 		}
