@@ -24,7 +24,7 @@ import (
 // KONFIGURASI VERSI APLIKASI
 // ==========================================
 
-const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/version.txt" 
+const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
