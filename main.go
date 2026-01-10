@@ -447,7 +447,8 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 					btn := o.(*widget.Button)
 					btn.SetText(fmt.Sprintf("%d", displayYear))
 					
-					// Warna tombol tahun dibuat standar (Medium/Low) agar tidak norak
+					// Warna tombol tahun dibuat standar (Medium) agar tidak norak tapi tetap terlihat tombol
+					// Tidak ada Highlight warna khusus untuk tahun aktif
 					btn.Importance = widget.MediumImportance
 					
 					btn.OnTapped = func() {
@@ -474,8 +475,11 @@ func createCalendarPopup(parentCanvas fyne.Canvas, initialDate time.Time, onDate
 			
 			contentStack.Objects = []fyne.CanvasObject{yearView}
 			
-			// Scroll ke posisi tengah
-			list.ScrollTo(widget.ListItemID(scrollIndex))
+			// FIX: Gunakan Goroutine + Sleep untuk memastikan Layout siap sebelum Scroll
+			go func() {
+				time.Sleep(100 * time.Millisecond) // Jeda 100ms
+				list.ScrollTo(widget.ListItemID(scrollIndex))
+			}()
 		}
 		
 		contentStack.Refresh()
