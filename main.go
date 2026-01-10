@@ -7,6 +7,7 @@ import (
 	"image/color"
 	"math"
 	"net/http"
+	"net/url"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -30,7 +31,7 @@ type UpdateData struct {
 	Version     string `json:"version"`
 	Title       string `json:"title"`
 	Message     string `json:"message"`
-	DownloadURL string `json:"download_url"` // Opsional jika ingin redirect
+	DownloadURL string `json:"download_url"` 
 }
 
 // ==========================================
@@ -643,22 +644,17 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // 7. MAIN APP
 // ==========================================
 
-// --- UPDATE CHECKER LOGIC ---
+// --- UPDATE CHECKER LOGIC (REVISED) ---
 func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
-	// Jalankan di Goroutine agar tidak memblokir UI saat startup
 	go func() {
-		// 1. Jeda 3 detik sesuai request
+		// 1. Jeda 3 detik
 		time.Sleep(3 * time.Second)
 
 		// 2. Cek Koneksi & Fetch Data
-		client := http.Client{
-			Timeout: 5 * time.Second,
-		}
-
+		client := http.Client{Timeout: 5 * time.Second}
 		resp, err := client.Get(UpdateCheckURL)
 		if err != nil {
-			// Gagal koneksi / Offline: abaikan saja
-			return
+			return // Offline
 		}
 		defer resp.Body.Close()
 
@@ -672,54 +668,54 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			return
 		}
 
-		// 4. Bandingkan Versi
+		// 4. Jika Versi Beda, Tampilkan Popup
 		if updateInfo.Version != CurrentAppVersion {
-			// Trigger UI Update (Harus sinkron dengan main thread di Fyne?)
-			// Widget creation biasanya aman, tapi untuk Show() lebih baik via antrian jika perlu.
-			// Di sini kita langsung buat popupnya.
 
-			// Konstruksi Popup Update
-			var popup *widget.PopUp
-
-			// Judul
+			// -- UI POPUP --
 			lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
 			lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 			lblTitle.TextSize = 16
 			lblTitle.Alignment = fyne.TextAlignCenter
 
-			// Versi Badge
 			lblVer := canvas.NewText("Versi Baru: "+updateInfo.Version, ColorTextWhite)
 			lblVer.TextSize = 12
 			badgeBg := canvas.NewRectangle(ColorBadgeGreen)
 			badgeBg.CornerRadius = 8
 			badgeVer := container.NewStack(badgeBg, container.NewPadded(lblVer))
 
-			// Pesan
 			msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
 			msgText.Wrapping = fyne.TextWrapWord
 
-			// Tombol Tutup / Update
-			btnClose := widget.NewButton("Tutup", func() {
-				if popup != nil {
-					popup.Hide()
+			// TOMBOL UPDATE (Buka URL)
+			btnUpdate := widget.NewButton("Update Sekarang", func() {
+				// Parse URL dari JSON
+				u, err := url.Parse(updateInfo.DownloadURL)
+				if err == nil {
+					myApp.OpenURL(u)
 				}
 			})
-			btnClose.Importance = widget.LowImportance
+			btnUpdate.Importance = widget.HighImportance // Warna Biru/Primary
 
-			// Layout Popup
+			// TOMBOL EXIT (Force Close)
+			btnExit := widget.NewButton("Keluar", func() {
+				myApp.Quit()
+			})
+			btnExit.Importance = widget.DangerImportance // Warna Merah
+
+			// Layout
 			contentVBox := container.NewVBox(
 				lblTitle,
 				container.NewCenter(badgeVer),
 				widget.NewSeparator(),
 				msgText,
 				layout.NewSpacer(),
-				btnClose,
+				btnUpdate,
+				btnExit,
 			)
 
-			// Styling Card Popup
 			bgRect := canvas.NewRectangle(ColorCardBg)
 			bgRect.CornerRadius = 12
-			bgRect.SetMinSize(fyne.NewSize(280, 200)) // Min size popup
+			bgRect.SetMinSize(fyne.NewSize(280, 250))
 
 			finalPopupContent := container.NewStack(
 				bgRect,
@@ -727,8 +723,11 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			)
 
 			// Tampilkan Popup
-			popup = widget.NewModalPopUp(container.NewCenter(finalPopupContent), myCanvas)
-			popup.Resize(fyne.NewSize(300, 250))
+			popup := widget.NewModalPopUp(container.NewCenter(finalPopupContent), myCanvas)
+			// Cegah popup ditutup dengan klik di luar area (Modal behavior)
+			// Fyne default popup bisa dicancel klik luar, untuk "Mandatory" kita bisa akali 
+			// dengan logic show ulang jika di-hide, tapi untuk simple UX, tombol Exit sudah cukup.
+			popup.Resize(fyne.NewSize(300, 300))
 			popup.Show()
 		}
 	}()
