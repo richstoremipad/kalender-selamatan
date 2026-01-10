@@ -8,6 +8,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os" // <--- PENTING: Tambahkan import ini
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -23,8 +24,7 @@ import (
 // KONFIGURASI VERSI APLIKASI
 // ==========================================
 
-// Ganti URL ini dengan URL raw file JSON di server Anda
-const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/main/version.txt" 
+const UpdateCheckURL = "https://raw.githubusercontent.com/richstoremipad/validate/version.txt" 
 const CurrentAppVersion = "1.0.0"
 
 type UpdateData struct {
@@ -644,7 +644,7 @@ func createCard(title, subTitle, dateStr, wetonStr, rumusStr, descStr string, st
 // 7. MAIN APP
 // ==========================================
 
-// --- UPDATE CHECKER LOGIC (FIXED LAYOUT) ---
+// --- UPDATE CHECKER LOGIC (ANTI-CRASH FIXED) ---
 func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 	go func() {
 		time.Sleep(3 * time.Second)
@@ -667,7 +667,6 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 
 		if updateInfo.Version != CurrentAppVersion {
 
-			// -- UI POPUP --
 			lblTitle := canvas.NewText(updateInfo.Title, ColorTextWhite)
 			lblTitle.TextStyle = fyne.TextStyle{Bold: true}
 			lblTitle.TextSize = 16
@@ -682,35 +681,28 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 			msgText := widget.NewRichTextFromMarkdown(updateInfo.Message)
 			msgText.Wrapping = fyne.TextWrapWord
 
-			// ----------------------------------------------------
-			// LOGIKA TOMBOL BARU (HBox + Spacer)
-			// ----------------------------------------------------
-
-			// TOMBOL EXIT
+			// --- FIX TOMBOL KELUAR (ANTI-CRASH) ---
 			btnExit := widget.NewButton("Keluar", func() {
-				myApp.Quit()
+				// Gunakan os.Exit(0) agar aplikasi langsung mati tanpa panic
+				os.Exit(0)
 			})
-			btnExit.Importance = widget.DangerImportance // Merah
+			btnExit.Importance = widget.DangerImportance 
 
-			// TOMBOL UPDATE
 			btnUpdate := widget.NewButton("Update", func() {
 				u, err := url.Parse(updateInfo.DownloadURL)
 				if err == nil {
 					myApp.OpenURL(u)
 				}
 			})
-			btnUpdate.Importance = widget.HighImportance // Biru/Primary
+			btnUpdate.Importance = widget.HighImportance 
 
-			// Container Horizontal: [Keluar] --SPACER-- [Update]
-			// NewHBox membuat tombol mengikuti ukuran text (tidak melebar)
-			// Spacer mendorong mereka ke ujung kiri dan kanan.
+			// LAYOUT TOMBOL DIBAWAH
 			buttonRow := container.NewHBox(
 				btnExit,
-				layout.NewSpacer(),
+				layout.NewSpacer(), // Space longgar di tengah
 				btnUpdate,
 			)
 
-			// Konten Utama (Judul, Versi, Pesan)
 			mainContent := container.NewVBox(
 				lblTitle,
 				container.NewCenter(badgeVer),
@@ -718,14 +710,12 @@ func checkForUpdates(myCanvas fyne.Canvas, myApp fyne.App) {
 				msgText,
 			)
 
-			// Menggabungkan semuanya dengan Border Layout
-			// Konten Utama di Tengah, Tombol di Bawah
 			finalLayout := container.NewBorder(
-				nil,                          // Top
-				container.NewPadded(buttonRow), // Bottom (Tombol)
-				nil,                          // Left
-				nil,                          // Right
-				container.NewPadded(mainContent), // Center
+				nil,                          
+				container.NewPadded(buttonRow), // Tombol di bawah
+				nil,                         
+				nil,                          
+				container.NewPadded(mainContent),
 			)
 
 			bgRect := canvas.NewRectangle(ColorCardBg)
